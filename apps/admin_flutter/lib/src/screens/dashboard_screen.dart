@@ -85,6 +85,11 @@ class DashboardScreen extends ConsumerWidget {
             child: const Text('Positions', style: TextStyle(color: Colors.white))
           ),
           IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            tooltip: 'Settings',
+            onPressed: () => context.go('/settings'),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
               context.go('/login');
