@@ -72,6 +72,11 @@ router.get('/export', requireAuth, async (req: any, res: any) => {
     res.setHeader('Content-Disposition', 'attachment; filename=CandidatesExport.xlsx');
 
     await workbook.xlsx.write(res);
+    
+    await prisma.analyticsEvent.create({
+      data: { organizationId: req.user.organizationId, eventName: 'EXPORT_EXCEL' }
+    });
+
     res.end();
   } catch (error) {
     res.status(500).json({ success: false, message: 'Export failed' });
@@ -105,6 +110,11 @@ router.put('/:id/status', requireAuth, async (req: any, res: any) => {
     where: { id: req.params.id },
     data: { status }
   });
+  
+  await prisma.analyticsEvent.create({
+    data: { organizationId: req.user.organizationId, eventName: 'STATUS_CHANGE' }
+  });
+
   res.json({ success: true, data: application });
 });
 

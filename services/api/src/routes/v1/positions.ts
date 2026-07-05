@@ -27,17 +27,20 @@ router.get('/', async (req: any, res: any) => {
 
 router.post('/', requireAuth, async (req: any, res: any) => {
   const { title, description, department, location, status } = req.body;
-  const position = await prisma.position.create({
-    data: {
-      organizationId: req.user.organizationId,
-      title,
-      description,
-      department,
-      location,
-      status: status || 'DRAFT'
-    }
-  });
-  res.json({ success: true, data: position });
+    const newPosition = await prisma.position.create({
+      data: {
+        organizationId: req.user?.organizationId || 'default-org-id',
+        title,
+        description,
+        department,
+        location,
+        status: status || 'DRAFT'
+      }
+    });
+    await prisma.analyticsEvent.create({
+      data: { organizationId: req.user?.organizationId || 'default-org-id', eventName: 'POSITION_CREATED' }
+    });
+    res.json({ success: true, data: newPosition });
 });
 
 router.put('/:id', requireAuth, async (req: any, res: any) => {

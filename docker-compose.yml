@@ -1,39 +1,65 @@
 version: '3.8'
+
 services:
-  postgres:
-    image: postgres:15
+  db:
+    image: postgres:15-alpine
     environment:
-      POSTGRES_USER: talentos
-      POSTGRES_PASSWORD: talentos_password
-      POSTGRES_DB: talentos_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-talentos_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-talentos_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-talentos_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: ./services/api
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-talentos_user}:${POSTGRES_PASSWORD:-talentos_pass}@db:5432/${POSTGRES_DB:-talentos_db}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-super_secret_production_key}
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-talentos-mvp-bucket}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcs-key.json
+    volumes:
+      - ./logs:/app/logs
+      - ./gcs-key.json:/app/gcs-key.json:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+  admin_flutter:
+    build:
+      context: ./apps/admin_flutter
+    ports:
+      - "8081:80"
+
+  candidate_flutter:
+    build:
+      context: ./apps/candidate_flutter
+    ports:
+      - "8082:80"
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - admin_flutter
+      - candidate_flutter
 
   pgadmin:
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@talentos.local
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@talentos.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
     ports:
       - "5050:80"
     depends_on:
-      - postgres
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
+      - db
 
 volumes:
   postgres_data:

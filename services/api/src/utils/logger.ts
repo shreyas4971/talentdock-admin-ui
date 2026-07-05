@@ -1,9 +1,23 @@
-import pino from 'pino';
+import winston from 'winston';
+import path from 'path';
 
-export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: { colorize: true },
-  },
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'talentos-api' },
+  transports: [
+    new winston.transports.File({ filename: path.join(__dirname, '../../../logs/error.log'), level: 'error' }),
+    new winston.transports.File({ filename: path.join(__dirname, '../../../logs/combined.log') }),
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
+  ],
 });
+
+export default logger;

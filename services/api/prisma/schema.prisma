@@ -55,6 +55,7 @@ model User {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
+  feedback         UserFeedback[]
 }
 
 model Candidate {
@@ -156,6 +157,27 @@ model ActivityFeed {
   action         String
   entityType     String
   entityId       String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+}
+
+model UserFeedback {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  module         String
+  feedbackText   String
+  status         String       @default("NEW")
+  priority       String       @default("LOW")
+  internalNotes  String?
+  createdAt      DateTime     @default(now())
+}
+
+model AnalyticsEvent {
+  id             String       @id @default(uuid())
+  organizationId String
+  eventName      String
   metadata       Json?
   createdAt      DateTime     @default(now())
 }

@@ -7,6 +7,7 @@ import 'src/screens/position_list_screen.dart';
 import 'src/screens/position_edit_screen.dart';
 import 'src/screens/candidate_list_screen.dart';
 import 'src/screens/candidate_details_screen.dart';
+import 'src/screens/feedback_list_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: AdminApp()));
@@ -47,6 +48,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => CandidateDetailsScreen(id: state.pathParameters['id']!),
           ),
         ]
+      ),
+      GoRoute(
+        path: '/feedback',
+        builder: (context, state) => const FeedbackListScreen(),
       ),
     ],
   );

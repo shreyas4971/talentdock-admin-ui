@@ -97,6 +97,10 @@ router.post('/', upload.single('resume'), async (req: any, res: any) => {
       }
     });
 
+    await prisma.analyticsEvent.create({
+      data: { organizationId: orgId, eventName: 'APPLICATION_SUBMITTED' }
+    });
+
     res.json({ success: true, data: { referenceId } });
   } catch (error: any) {
     console.error(error);
