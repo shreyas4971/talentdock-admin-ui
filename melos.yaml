@@ -1,0 +1,47 @@
+name: talentos
+repository: https://github.com/example/talentos
+
+packages:
+  - apps/**
+  - packages/**
+
+scripts:
+  bootstrap:
+    run: melos run clean && melos run get
+    description: Clean and fetch dependencies for all packages.
+    
+  get:
+    run: melos exec -- "flutter pub get"
+    description: Run `flutter pub get` in all packages.
+
+  analyze:
+    run: melos exec -- "flutter analyze"
+    description: Run `flutter analyze` in all packages.
+
+  test:
+    run: melos exec --dir-exists="test" -- "flutter test"
+    description: Run all Flutter tests in this project.
+
+  format:
+    run: melos exec -- "dart format ."
+    description: Format Dart code in all packages.
+
+  lint:
+    run: melos run analyze
+    description: Alias for analyze.
+
+  generate:
+    run: melos exec --depends-on="build_runner" -- "dart run build_runner build --delete-conflicting-outputs"
+    description: Run build_runner across all packages.
+
+  build:
+    run: melos exec --dir-exists="lib" -- "flutter build web"
+    description: Build web targets for all apps.
+
+  clean:
+    run: melos exec -- "flutter clean"
+    description: Clean all packages.
+
+  coverage:
+    run: melos exec --dir-exists="test" -- "flutter test --coverage"
+    description: Run tests and collect coverage.

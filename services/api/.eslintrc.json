@@ -1,0 +1,43 @@
+{
+  "plugins": ["import"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@prisma/client", "prisma"],
+            "message": "Domain and Application layers must not depend on Prisma directly."
+          },
+          {
+            "group": ["express"],
+            "message": "Application and Domain layers must not depend on Express."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/features/*/presentation/**/*.ts", 
+        "src/app.ts", 
+        "src/index.ts",
+        "src/routes/**/*.ts", 
+        "src/middlewares/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/features/*/infrastructure/**/*.ts", 
+        "src/routes/health.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}

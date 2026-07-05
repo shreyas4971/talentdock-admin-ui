@@ -1,0 +1,57 @@
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// MVP Mock Auth Middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  req.user = { organizationId: 'default-org-id' };
+  next();
+};
+
+router.get('/public', async (req: any, res: any) => {
+  const orgId = req.headers['x-org-id'] || 'default-org-id';
+  const positions = await prisma.position.findMany({
+    where: { organizationId: orgId, status: 'PUBLISHED' }
+  });
+  res.json({ success: true, data: positions });
+});
+
+router.get('/', async (req: any, res: any) => {
+  const positions = await prisma.position.findMany({
+    where: { organizationId: req.user?.organizationId || 'default-org-id' }
+  });
+  res.json({ success: true, data: positions });
+});
+
+router.post('/', requireAuth, async (req: any, res: any) => {
+  const { title, description, department, location, status } = req.body;
+  const position = await prisma.position.create({
+    data: {
+      organizationId: req.user.organizationId,
+      title,
+      description,
+      department,
+      location,
+      status: status || 'DRAFT'
+    }
+  });
+  res.json({ success: true, data: position });
+});
+
+router.put('/:id', requireAuth, async (req: any, res: any) => {
+  const { id } = req.params;
+  const position = await prisma.position.update({
+    where: { id },
+    data: req.body
+  });
+  res.json({ success: true, data: position });
+});
+
+router.get('/:id', async (req: any, res: any) => {
+  const position = await prisma.position.findUnique({ where: { id: req.params.id } });
+  res.json({ success: true, data: position });
+});
+
+export default router;

@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                String             @id @default(uuid())
+  name              String
+  branding          Branding?
+  featureFlags      OrganizationFeatureFlag?
+  
+  users             User[]
+  candidates        Candidate[]
+  positions         Position[]
+  positionTemplates PositionTemplate[]
+  
+  activityFeed      ActivityFeed[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+}
+
+model OrganizationFeatureFlag {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  flags          Json         // e.g., { "module_recruitment": true, "ai_parsing": true }
+  updatedAt      DateTime     @updatedAt
+}
+
+model Branding {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  logoUrl        String?
+  primaryColor   String?      @default("#2563EB")
+  secondaryColor String?      @default("#0F172A")
+  accentColor    String?      @default("#14B8A6")
+  website        String?
+  emailFooter    String?      
+  socialLinks    Json?
+}
+
+model User {
+  id               String            @id @default(uuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  email            String            @unique
+  passwordHash     String
+  role             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+}
+
+model Candidate {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  linkedin       String?
+  portfolio      String?
+  applications   CandidateApplication[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  @@unique([organizationId, email])
+}
+
+model PositionTemplate {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  department     String
+  employmentType String
+  description    String       
+  skills         Json?
+  createdAt      DateTime     @default(now())
+}
+
+model Position {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  title String
+  description String?
+  department String?
+  location String?
+  status String @default("DRAFT")
+  applications CandidateApplication[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CandidateApplication {
+  id             String       @id @default(uuid())
+  referenceId    String       @unique
+  candidateId    String
+  candidate      Candidate    @relation(fields: [candidateId], references: [id])
+  positionId     String
+  position       Position     @relation(fields: [positionId], references: [id])
+  status         String       @default("APPLIED") 
+  
+  experienceYears Int?
+  city           String?
+  country        String?
+  currentCompany String?
+  currentRole    String?
+  expectedSalary String?
+  noticePeriod   String?
+  
+  documents      CandidateDocument[]
+  timeline       CandidateTimeline[]
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+}
+
+model CandidateDocument {
+  id             String               @id @default(uuid())
+  applicationId  String
+  application    CandidateApplication @relation(fields: [applicationId], references: [id])
+  logicalName    String               
+  mimeType       String               
+  sizeBytes      Int
+  storageKey     String               
+  version        Int                  @default(1)
+  isCurrent      Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+}
+
+model CandidateTimeline {
+  id String @id @default(uuid())
+  applicationId String
+  application CandidateApplication @relation(fields: [applicationId], references: [id])
+  eventType String
+  description String 
+  createdAt DateTime @default(now())
+}
+
+model ActivityFeed {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  actorId        String?      
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+}

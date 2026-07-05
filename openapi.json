@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TalentOS API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Position": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "organizationId": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["DRAFT", "PUBLISHED", "OPEN", "PAUSED", "CLOSED", "ARCHIVED"] }
+        },
+        "required": ["id", "organizationId", "name", "status"]
+      },
+      "Candidate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["id", "email", "firstName", "lastName"]
+      },
+      "ApiSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "requestId": { "type": "string" },
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        },
+        "required": ["success", "requestId", "data"]
+      }
+    }
+  },
+  "paths": {
+    "/positions/{id}/publish": {
+      "post": {
+        "summary": "Publish a position",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully published",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

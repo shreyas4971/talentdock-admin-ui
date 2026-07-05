@@ -1,0 +1,19 @@
+export enum PositionStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+  OPEN = 'OPEN',
+  PAUSED = 'PAUSED',
+  CLOSED = 'CLOSED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+export enum ApplicationStatus {
+  APPLIED = 'APPLIED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  TECHNICAL_REVIEW = 'TECHNICAL_REVIEW',
+  HR_REVIEW = 'HR_REVIEW',
+  OFFER = 'OFFER',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+  ARCHIVED = 'ARCHIVED',
+}
