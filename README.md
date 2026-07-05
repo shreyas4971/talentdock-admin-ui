@@ -1,6 +1,6 @@
-# TalentOS Recruitment
+# TalentDock Recruitment
 
-TalentOS Recruitment is a lightweight, self-hosted applicant tracking system (ATS) designed for individuals or small teams to seamlessly manage positions and candidates.
+TalentDock Recruitment is a lightweight, self-hosted applicant tracking system (ATS) designed for individuals or small teams to seamlessly manage positions and candidates.
 
 ## 🚀 Features
 - **Admin Web**: A clean Flutter dashboard to track candidates, export to Excel, and manage positions.
@@ -71,9 +71,9 @@ cd apps/candidate_flutter
 flutter run -d web-server --web-port 8081
 ```
 
-*(Note: If using NGINX via Docker Compose, you can map `admin.talentos.local` and `careers.talentos.local` in your hosts file to access them seamlessly without running standalone web-servers).*
+*(Note: If using NGINX via Docker Compose, you can map `admin.talentdock.local` and `careers.talentdock.local` in your hosts file to access them seamlessly without running standalone web-servers).*
 
 ### 6. You're Ready!
 Log in at `http://localhost:8080` using:
-- **Email:** `admin@talentos.local`
+- **Email:** `admin@talentdock.local`
 - **Password:** `admin123`

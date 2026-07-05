@@ -4,26 +4,26 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // 1. Ensure a default organization exists
-  const org = await prisma.organization.upsert({
-    where: { id: 'default-org-id' },
+  // 1. Create the base workspace (Required by schema)
+  const workspace = await prisma.organization.upsert({
+    where: { id: 'talentdock-workspace' },
     update: {},
     create: {
-      id: 'default-org-id',
-      name: 'My Personal Workspace',
+      id: 'talentdock-workspace',
+      name: 'TalentDock Personal Workspace',
     },
   });
-  console.log(`✅ Organization created: ${org.name}`);
+  console.log(`✅ Base workspace configured.`);
 
   // 2. Create an admin user
   const admin = await prisma.user.upsert({
     where: { email: 'admin@talentos.local' },
     update: {},
     create: {
-      email: 'admin@talentos.local',
+      email: 'admin@talentdock.local',
       passwordHash: 'admin123', // Demo password
       role: 'ADMIN',
-      organizationId: org.id,
+      organizationId: workspace.id,
     },
   });
   console.log(`✅ Admin User created: ${admin.email}`);
@@ -36,10 +36,32 @@ async function main() {
       location: 'Remote',
       description: 'We are looking for a rockstar Flutter developer to build beautiful UIs.',
       status: 'PUBLISHED',
-      organizationId: org.id,
+      organizationId: workspace.id,
     },
   });
   console.log(`✅ Sample Position created: ${position.title}`);
+
+  // 4. Create a sample candidate & application
+  const candidate = await prisma.candidate.create({
+    data: {
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane.doe@example.com',
+      phone: '555-0199',
+      organizationId: workspace.id,
+    },
+  });
+  
+  await prisma.candidateApplication.create({
+    data: {
+      referenceId: 'REC-DEMO-001',
+      candidateId: candidate.id,
+      positionId: position.id,
+      status: 'APPLIED',
+      experienceYears: 4,
+    }
+  });
+  console.log(`✅ Sample Candidate applied: ${candidate.firstName} ${candidate.lastName}`);
 
   console.log('Database seeding complete!');
 }
