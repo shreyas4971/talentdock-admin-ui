@@ -19,8 +19,13 @@ class FilterState {
     );
   }
 }
+class FilterNotifier extends Notifier<FilterState> {
+  @override
+  FilterState build() => FilterState();
+  void updateState(FilterState newState) => state = newState;
+}
 
-final filtersProvider = StateProvider<FilterState>((ref) => FilterState());
+final filtersProvider = NotifierProvider<FilterNotifier, FilterState>(FilterNotifier.new);
 
 final candidatesProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(filtersProvider);
@@ -84,7 +89,7 @@ class _CandidateListScreenState extends ConsumerState<CandidateListScreen> {
                   child: TextField(
                     controller: _searchCtrl,
                     decoration: const InputDecoration(labelText: 'Search (Name, Email, Ref ID)', border: OutlineInputBorder()),
-                    onChanged: (val) => ref.read(filtersProvider.notifier).state = filters.copyWith(search: val),
+                    onChanged: (val) => ref.read(filtersProvider.notifier).updateState(filters.copyWith(search: val)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -97,7 +102,7 @@ class _CandidateListScreenState extends ConsumerState<CandidateListScreen> {
                         const DropdownMenuItem(value: null, child: Text('All Positions')),
                         ...positions.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['title'])))
                       ],
-                      onChanged: (val) => ref.read(filtersProvider.notifier).state = filters.copyWith(positionId: val, clearPosition: val == null),
+                      onChanged: (val) => ref.read(filtersProvider.notifier).updateState(filters.copyWith(positionId: val, clearPosition: val == null)),
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (_, __) => const Text('Error loading positions'),
@@ -117,14 +122,14 @@ class _CandidateListScreenState extends ConsumerState<CandidateListScreen> {
                       DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
                       DropdownMenuItem(value: 'HIRED', child: Text('Hired')),
                     ],
-                    onChanged: (val) => ref.read(filtersProvider.notifier).state = filters.copyWith(status: val, clearStatus: val == null),
+                    onChanged: (val) => ref.read(filtersProvider.notifier).updateState(filters.copyWith(status: val, clearStatus: val == null)),
                   ),
                 ),
                 const SizedBox(width: 16),
                 TextButton(
                   onPressed: () {
                     _searchCtrl.clear();
-                    ref.read(filtersProvider.notifier).state = FilterState();
+                    ref.read(filtersProvider.notifier).updateState(FilterState());
                   },
                   child: const Text('Clear Filters'),
                 )
