@@ -7,7 +7,6 @@
 | **v1.2.0** | Interview Scheduling | Backlog | TBD |
 | **v1.3.0** | Email Templates & Notifications | Backlog | TBD |
 | **v2.0.0** | AI Recruitment Assistant | Backlog | TBD |
-| **v3.0.0** | TalentOS HR Platform | Backlog | TBD |
 
 ## Release Discipline
 - **v1.0.x**: Dedicated exclusively to bug fixes and security patches stemming from MVP release.

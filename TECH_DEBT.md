@@ -21,8 +21,3 @@
 **Impact**: Medium
 **Description**: Backend utilizes standard `console.log`. No centralized tracing or error aggregation exists.
 **Remedy**: Implement `winston` / `pino` and export to Datadog or Sentry.
-
-### 5. Multi-tenant Schema Leakage
-**Impact**: Low
-**Description**: The MVP aggressively mocks `organizationId: 'default-org-id'` across all endpoints bypassing proper JWT tenancy scoping.
-**Remedy**: Enforce strict JWT tenant decoding middleware before onboarding secondary organizations.
