@@ -4,6 +4,7 @@ import multer from 'multer';
 import { Storage } from '@google-cloud/storage';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import logger from '../../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -84,7 +85,7 @@ router.post('/', upload.single('resume'), async (req: any, res: any) => {
       const blob = bucket.file(gcsPath);
       await blob.save(file.buffer, { contentType: file.mimetype });
     } catch (gcsError: any) {
-      console.warn('GCS Upload mocked for local dev. Error:', gcsError.message);
+      logger.error('GCS Upload mocked for local dev. Error: ' + gcsError.message);
     }
 
     await prisma.candidateDocument.create({
@@ -103,7 +104,7 @@ router.post('/', upload.single('resume'), async (req: any, res: any) => {
 
     res.json({ success: true, data: { referenceId } });
   } catch (error: any) {
-    console.error(error);
+    logger.error('Application submission failed: ' + error.message, { stack: error.stack });
     res.status(500).json({ success: false, message: error.message });
   }
 });

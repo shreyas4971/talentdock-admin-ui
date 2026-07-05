@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import logger from '../../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -31,6 +32,7 @@ router.post('/', requireAuth, async (req: any, res: any) => {
 
     res.json({ success: true, data: feedback });
   } catch (error: any) {
+    logger.error('Feedback error: ' + error.message);
     res.status(500).json({ success: false, message: 'Failed to submit feedback' });
   }
 });
