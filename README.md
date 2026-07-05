@@ -19,34 +19,61 @@ graph TD
     C --> E[Google Cloud Storage]
 ```
 
-## 🛠️ Local Startup Guide
+## 🛠️ Quick Start Guide
+
+Follow these steps to get your personal recruitment system running from a fresh clone.
 
 ### Prerequisites
-- Docker and Docker Compose
-- Node.js 20+
-- Flutter SDK (stable)
+- Docker & Docker Compose installed
+- Node.js 20+ installed
+- Flutter SDK (stable) installed
 
-### 1. Environment Setup
-1. Copy `.env.example` to `.env` in the project root.
-2. Provide a valid `JWT_SECRET`.
-3. Drop your GCP Service Account JSON key in the root directory named `gcs-key.json` and configure `GCS_BUCKET_NAME`.
+### 1. Install Dependencies
+```bash
+cd services/api && npm install
+cd ../../apps/admin_flutter && flutter pub get
+cd ../candidate_flutter && flutter pub get
+cd ../..
+```
 
-### 2. Running Locally (Docker Compose)
-The easiest way to start TalentOS is via Docker:
+### 2. Environment Configuration
+Copy the template environment file:
+```bash
+cp .env.example .env
+```
+*(Optionally, place your GCP Service Account JSON key as `gcs-key.json` in the root and configure `GCS_BUCKET_NAME` inside `.env` if you want working file uploads).*
+
+### 3. Start the Backend & Database
+Use Docker Compose to spin up the PostgreSQL database and API:
 ```bash
 docker-compose up -d --build
 ```
-This command orchestrates the API, PostgreSQL database, and NGINX reverse proxy for both Flutter frontends.
 
-### 3. Accessing the Apps
-- **Admin Web**: `http://admin.talentos.local` (ensure your `/etc/hosts` maps this to `127.0.0.1`)
-- **Candidate Web**: `http://careers.talentos.local`
-- **Backend API**: `http://localhost:3000`
-
-### 4. Initial Database Migration
-Once the containers are running, push the database schema:
+### 4. Database Setup & Seeding
+From the root directory, execute the database migration and run the seed script to create your Admin account and a sample position:
 ```bash
 docker-compose exec api npx prisma db push
+docker-compose exec api npx prisma db seed
 ```
 
-You're now ready to recruit!
+### 5. Start the Web Apps
+Open two new terminal windows and start the Flutter web clients:
+
+**Terminal 1 (Admin Web):**
+```bash
+cd apps/admin_flutter
+flutter run -d web-server --web-port 8080
+```
+
+**Terminal 2 (Candidate Web):**
+```bash
+cd apps/candidate_flutter
+flutter run -d web-server --web-port 8081
+```
+
+*(Note: If using NGINX via Docker Compose, you can map `admin.talentos.local` and `careers.talentos.local` in your hosts file to access them seamlessly without running standalone web-servers).*
+
+### 6. You're Ready!
+Log in at `http://localhost:8080` using:
+- **Email:** `admin@talentos.local`
+- **Password:** `admin123`
