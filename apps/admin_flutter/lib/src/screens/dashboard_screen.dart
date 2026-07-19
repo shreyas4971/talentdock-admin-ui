@@ -1,160 +1,169 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../api_client.dart';
 
-final dashboardProvider = FutureProvider((ref) async {
-  final res = await ref.read(dioProvider).get('/dashboard');
-  return res.data['data'];
-});
-
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  void _showFeedbackDialog(BuildContext context, WidgetRef ref) {
-    final ctrl = TextEditingController();
-    bool isSubmitting = false;
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Report Issue / Suggest Improvement'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Your feedback helps us prioritize the next version.'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: ctrl,
-                maxLines: 4,
-                decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'What went wrong or what could be better?'),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: isSubmitting ? null : () async {
-                if (ctrl.text.isEmpty) return;
-                setState(() => isSubmitting = true);
-                try {
-                  await ref.read(dioProvider).post('/feedback', data: {
-                    'module': 'Admin Dashboard',
-                    'feedbackText': ctrl.text
-                  });
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Thank you for your feedback!')));
-                  }
-                } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                } finally {
-                  if (ctx.mounted) setState(() => isSubmitting = false);
-                }
-              },
-              child: isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Submit'),
-            )
-          ],
-        )
-      )
-    );
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final counts = ref.watch(dashboardProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.feedback, color: Colors.white),
-            tooltip: 'Provide Feedback',
-            onPressed: () => _showFeedbackDialog(context, ref),
-          ),
-          TextButton(
-            onPressed: () => context.go('/feedback'), 
-            child: const Text('Feedback Board', style: TextStyle(color: Colors.white))
-          ),
-          TextButton(
-            onPressed: () => context.go('/candidates'), 
-            child: const Text('Candidates', style: TextStyle(color: Colors.white))
-          ),
-          TextButton(
-            onPressed: () => context.go('/positions'), 
-            child: const Text('Positions', style: TextStyle(color: Colors.white))
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            tooltip: 'Settings',
-            onPressed: () => context.go('/settings'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              context.go('/login');
-            },
-          )
-        ],
-      ),
-      body: counts.when(
-        data: (data) {
-          final analytics = data['analytics'] ?? {};
-          return Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Overview', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Dashboard', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 32),
+        GridView.count(
+          crossAxisCount: isDesktop ? 4 : 2,
+          crossAxisSpacing: 24,
+          mainAxisSpacing: 24,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: isDesktop ? 2.5 : 2.0,
+          children: const [
+            _StatCard('Open Positions', '12', Icons.work),
+            _StatCard('New Applications', '28', Icons.today),
+            _StatCard('Pending Review', '42', Icons.pending_actions),
+            _StatCard('Interviews Today', '5', Icons.video_call),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Flex(
+          direction: isDesktop ? Axis.horizontal : Axis.vertical,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: isDesktop ? 2 : 0,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildStatCard('Open Positions', data['openPositions']),
-                      _buildStatCard('Total Applications', data['totalApplications']),
-                      _buildStatCard('Apps Today', data['applicationsToday']),
-                      _buildStatCard('Shortlisted', data['shortlisted']),
+                      const Text('Recent Applications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Position')),
+                            DataColumn(label: Text('Status')),
+                            DataColumn(label: Text('Time')),
+                          ],
+                          rows: List.generate(10, (index) => DataRow(cells: [
+                            DataCell(Text('Candidate ${index + 1}')),
+                            DataCell(Text(index % 2 == 0 ? 'Flutter Dev' : 'Designer')),
+                            DataCell(Text(index % 3 == 0 ? 'Review' : 'Applied')),
+                            DataCell(Text('${index * 15} mins ago')),
+                          ])),
+                        ),
+                      )
                     ],
                   ),
+                ),
+              ),
+            ),
+            if (isDesktop) const SizedBox(width: 32) else const SizedBox(height: 32),
+            Expanded(
+              flex: isDesktop ? 1 : 0,
+              child: Column(
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Upcoming Interviews', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const CircleAvatar(child: Icon(Icons.person)),
+                            title: const Text('John Doe'),
+                            subtitle: const Text('Flutter Dev\nToday, 2:00 PM'),
+                            isThreeLine: true,
+                          ),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const CircleAvatar(child: Icon(Icons.person)),
+                            title: const Text('Jane Smith'),
+                            subtitle: const Text('Designer\nTomorrow, 11:00 AM'),
+                            isThreeLine: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
-                  const Text('Usage Analytics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      _buildStatCard('Positions Created', analytics['positionsCreated'], Colors.indigo),
-                      _buildStatCard('Applications Submitted', analytics['applicationsSubmitted'], Colors.purple),
-                      _buildStatCard('Status Changes', analytics['statusChanges'], Colors.teal),
-                      _buildStatCard('Excel Exports', analytics['excelExports'], Colors.green),
-                      _buildStatCard('Feedback Provided', analytics['feedbacksSubmitted'], Colors.deepOrange),
-                    ],
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Quick Actions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.add),
+                              label: const Text('Create Position'),
+                              onPressed: () => context.go('/positions/new'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.people),
+                              label: const Text('View Candidates'),
+                              onPressed: () => context.go('/candidates'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err')),
-      ),
+            )
+          ],
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildStatCard(String title, dynamic count, [Color? color]) {
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String count;
+  final IconData icon;
+
+  const _StatCard(this.title, this.count, this.icon);
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(title, style: TextStyle(fontSize: 16, color: color ?? Colors.black54)),
-            const SizedBox(height: 8),
-            Text('${count ?? 0}', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.blueAccent, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(count, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                  Text(title, style: TextStyle(color: Colors.grey.shade600), overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            )
           ],
         ),
       ),

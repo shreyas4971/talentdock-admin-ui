@@ -76,4 +76,4 @@ flutter run -d web-server --web-port 8081
 ### 6. You're Ready!
 Log in at `http://localhost:8080` using:
 - **Email:** `admin@talentdock.local`
-- **Password:** `admin123`
+- **Password:** Checked your `.env` for `ADMIN_PASSWORD`, or use the temporary default `talentdock-temp` (you will be prompted to change it).

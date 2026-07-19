@@ -24,6 +24,8 @@ const buildWhereClause = (orgId: string, q: any) => {
       { candidate: { lastName: { contains: term, mode: 'insensitive' } } },
       { candidate: { email: { contains: term, mode: 'insensitive' } } },
       { candidate: { phone: { contains: term, mode: 'insensitive' } } },
+      { position: { title: { contains: term, mode: 'insensitive' } } },
+      { candidate: { notes: { some: { content: { contains: term, mode: 'insensitive' } } } } }
     ];
   }
   return where;
@@ -96,9 +98,10 @@ router.get('/:id', requireAuth, async (req: any, res: any) => {
   const application = await prisma.candidateApplication.findUnique({
     where: { id: req.params.id },
     include: {
-      candidate: true,
       position: true,
-      documents: true
+      documents: true,
+      timeline: { orderBy: { createdAt: 'desc' } },
+      candidate: { include: { notes: { orderBy: { createdAt: 'desc' } }, interviews: true } }
     }
   });
   res.json({ success: true, data: application });
@@ -111,11 +114,90 @@ router.put('/:id/status', requireAuth, async (req: any, res: any) => {
     data: { status }
   });
   
+  await prisma.candidateTimeline.create({
+    data: {
+      applicationId: req.params.id,
+      eventType: 'STATUS_CHANGE',
+      description: `Status changed to ${status}`
+    }
+  });
+  
   await prisma.analyticsEvent.create({
     data: { organizationId: req.user.organizationId, eventName: 'STATUS_CHANGE' }
   });
 
   res.json({ success: true, data: application });
+});
+
+router.post('/:id/notes', requireAuth, async (req: any, res: any) => {
+  const application = await prisma.candidateApplication.findUnique({ where: { id: req.params.id } });
+  if (!application) return res.status(404).json({ success: false });
+
+  const note = await prisma.candidateNote.create({
+    data: {
+      candidateId: application.candidateId,
+      content: req.body.content
+    }
+  });
+
+  await prisma.candidateTimeline.create({
+    data: {
+      applicationId: req.params.id,
+      eventType: 'NOTE_ADDED',
+      description: 'A note was added to the candidate profile.'
+    }
+  });
+
+  await prisma.activityFeed.create({
+    data: { organizationId: req.user.organizationId, action: 'NOTE_ADDED', entityType: 'CANDIDATE', entityId: application.candidateId }
+  });
+
+  res.json({ success: true, data: note });
+});
+
+router.delete('/:id/notes/:noteId', requireAuth, async (req: any, res: any) => {
+  await prisma.candidateNote.delete({ where: { id: req.params.noteId } });
+  res.json({ success: true });
+});
+
+router.put('/:id/tags', requireAuth, async (req: any, res: any) => {
+  const application = await prisma.candidateApplication.findUnique({ where: { id: req.params.id } });
+  if (!application) return res.status(404).json({ success: false });
+
+  await prisma.candidate.update({
+    where: { id: application.candidateId },
+    data: { tags: req.body.tags || [] }
+  });
+
+  res.json({ success: true });
+});
+
+router.post('/bulk', requireAuth, async (req: any, res: any) => {
+  const { action, ids, status } = req.body;
+  
+  if (!ids || !ids.length) return res.status(400).json({ success: false });
+
+  if (action === 'delete') {
+    await prisma.candidateApplication.deleteMany({ where: { id: { in: ids } } });
+  } else if (action === 'updateStatus' && status) {
+    await prisma.candidateApplication.updateMany({
+      where: { id: { in: ids } },
+      data: { status }
+    });
+    
+    // Log timeline events
+    for (const id of ids) {
+      await prisma.candidateTimeline.create({
+        data: {
+          applicationId: id,
+          eventType: 'STATUS_CHANGE',
+          description: `Bulk status changed to ${status}`
+        }
+      });
+    }
+  }
+
+  res.json({ success: true });
 });
 
 export default router;

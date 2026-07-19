@@ -26,7 +26,7 @@ class _FeedbackListScreenState extends ConsumerState<FeedbackListScreen> {
       });
       ref.invalidate(feedbackListProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(getFriendlyErrorMessage(e))));
     }
   }
 

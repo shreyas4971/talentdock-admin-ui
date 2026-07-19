@@ -19,6 +19,8 @@ model Organization {
   positionTemplates PositionTemplate[]
   
   activityFeed      ActivityFeed[]
+  emailTemplates    EmailTemplate[]
+  savedFilters      SavedFilter[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   deletedAt         DateTime?
@@ -69,6 +71,9 @@ model Candidate {
   linkedin       String?
   portfolio      String?
   applications   CandidateApplication[]
+  notes          CandidateNote[]
+  interviews     Interview[]
+  tags           String[]     @default([])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
@@ -181,3 +186,47 @@ model AnalyticsEvent {
   metadata       Json?
   createdAt      DateTime     @default(now())
 }
+
+model CandidateNote {
+  id             String       @id @default(uuid())
+  candidateId    String
+  candidate      Candidate    @relation(fields: [candidateId], references: [id])
+  content        String
+  authorId       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model EmailTemplate {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  subject        String
+  body           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Interview {
+  id             String       @id @default(uuid())
+  candidateId    String
+  candidate      Candidate    @relation(fields: [candidateId], references: [id])
+  date           String       // YYYY-MM-DD
+  time           String       // HH:mm
+  interviewer    String
+  location       String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model SavedFilter {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  query          Json
+  createdAt      DateTime     @default(now())
+}
+

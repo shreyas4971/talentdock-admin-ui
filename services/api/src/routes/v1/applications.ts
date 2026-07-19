@@ -9,7 +9,7 @@ import logger from '../../utils/logger';
 const router = Router();
 const prisma = new PrismaClient();
 const storage = new Storage();
-const bucketName = process.env.GCS_BUCKET_NAME || 'talentos-mvp-bucket';
+const bucketName = process.env.GCS_BUCKET_NAME || 'talentdock-mvp-bucket';
 
 const upload = multer({
   storage: multer.memoryStorage(),

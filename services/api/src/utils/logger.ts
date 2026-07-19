@@ -7,7 +7,7 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     winston.format.json()
   ),
-  defaultMeta: { service: 'talentos-api' },
+  defaultMeta: { service: 'talentdock-api' },
   transports: [
     new winston.transports.File({ filename: path.join(__dirname, '../../../logs/error.log'), level: 'error' }),
     new winston.transports.File({ filename: path.join(__dirname, '../../../logs/combined.log') }),

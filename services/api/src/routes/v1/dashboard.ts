@@ -21,22 +21,61 @@ router.get('/', requireAuth, async (req: any, res: any) => {
 
   const today = new Date();
   today.setHours(0,0,0,0);
+  
+  const thisWeek = new Date();
+  thisWeek.setDate(thisWeek.getDate() - 7);
+  
+  const thisMonth = new Date();
+  thisMonth.setMonth(thisMonth.getMonth() - 1);
+
   const applicationsToday = await prisma.candidateApplication.count({
-    where: {
-      candidate: { organizationId: orgId },
-      createdAt: { gte: today }
-    }
+    where: { candidate: { organizationId: orgId }, createdAt: { gte: today } }
+  });
+  
+  const applicationsThisWeek = await prisma.candidateApplication.count({
+    where: { candidate: { organizationId: orgId }, createdAt: { gte: thisWeek } }
+  });
+  
+  const applicationsThisMonth = await prisma.candidateApplication.count({
+    where: { candidate: { organizationId: orgId }, createdAt: { gte: thisMonth } }
   });
 
   const shortlisted = await prisma.candidateApplication.count({
     where: { candidate: { organizationId: orgId }, status: { in: ['INTERVIEW', 'OFFER'] } }
   });
 
-  const positionsCreated = await prisma.analyticsEvent.count({ where: { organizationId: orgId, eventName: 'POSITION_CREATED' } });
-  const applicationsSubmitted = await prisma.analyticsEvent.count({ where: { organizationId: orgId, eventName: 'APPLICATION_SUBMITTED' } });
-  const statusChanges = await prisma.analyticsEvent.count({ where: { organizationId: orgId, eventName: 'STATUS_CHANGE' } });
-  const excelExports = await prisma.analyticsEvent.count({ where: { organizationId: orgId, eventName: 'EXPORT_EXCEL' } });
-  const feedbacksSubmitted = await prisma.analyticsEvent.count({ where: { organizationId: orgId, eventName: 'FEEDBACK_SUBMITTED' } });
+  const recentApplications = await prisma.candidateApplication.findMany({
+    where: { candidate: { organizationId: orgId } },
+    include: { candidate: true, position: true },
+    orderBy: { createdAt: 'desc' },
+    take: 5
+  });
+
+  const recentActivity = await prisma.activityFeed.findMany({
+    where: { organizationId: orgId },
+    orderBy: { createdAt: 'desc' },
+    take: 10
+  });
+
+  const upcomingInterviews = await prisma.interview.findMany({
+    where: { candidate: { organizationId: orgId } },
+    include: { candidate: true },
+    orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    take: 5
+  });
+
+  const recentlyUpdatedCandidates = await prisma.candidate.findMany({
+    where: { organizationId: orgId },
+    include: { applications: { include: { position: true } } },
+    orderBy: { updatedAt: 'desc' },
+    take: 5
+  });
+
+  const recentlyCreatedPositions = await prisma.position.findMany({
+    where: { organizationId: orgId },
+    orderBy: { createdAt: 'desc' },
+    take: 5
+  });
 
   res.json({
     success: true,
@@ -44,14 +83,14 @@ router.get('/', requireAuth, async (req: any, res: any) => {
       openPositions,
       totalApplications,
       applicationsToday,
+      applicationsThisWeek,
+      applicationsThisMonth,
       shortlisted,
-      analytics: {
-        positionsCreated,
-        applicationsSubmitted,
-        statusChanges,
-        excelExports,
-        feedbacksSubmitted
-      }
+      recentApplications,
+      recentActivity,
+      upcomingInterviews,
+      recentlyUpdatedCandidates,
+      recentlyCreatedPositions
     }
   });
 });

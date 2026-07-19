@@ -1,4 +1,4 @@
-# TalentOS Operations Manual
+# TalentDock Operations Manual
 
 ## 1. Startup Instructions
 Deploying the application requires Docker and Docker Compose.
@@ -14,8 +14,8 @@ Deploying the application requires Docker and Docker Compose.
    ```
 
 ## 2. Daily Administration
-- **Admin Portal**: Access via `http://admin.talentos.local` (Port 80 via Nginx routing).
-- **Careers Portal**: Access via `http://careers.talentos.local`.
+- **Admin Portal**: Access via `http://admin.talentdock.local` (Port 80 via Nginx routing).
+- **Careers Portal**: Access via `http://careers.talentdock.local`.
 - **Database Management**: Access `http://localhost:5050` to use pgAdmin (credentials in `.env`).
 
 ## 3. Logging Locations
@@ -27,11 +27,11 @@ Deploying the application requires Docker and Docker Compose.
 ## 4. Backup & Restore Procedure
 - **Backup**: 
   ```bash
-  docker-compose exec db pg_dump -U talentos_user -d talentos_db -F c -f /var/lib/postgresql/data/backup.dump
+  docker-compose exec db pg_dump -U talentdock_user -d talentdock_db -F c -f /var/lib/postgresql/data/backup.dump
   ```
 - **Restore**:
   ```bash
-  docker-compose exec db pg_restore -U talentos_user -d talentos_db -1 /var/lib/postgresql/data/backup.dump
+  docker-compose exec db pg_restore -U talentdock_user -d talentdock_db -1 /var/lib/postgresql/data/backup.dump
   ```
 
 ## 5. Upgrade Instructions

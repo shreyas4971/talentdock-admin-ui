@@ -1,139 +1,296 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../api_client.dart';
 
-final candidateDetailProvider = FutureProvider.family.autoDispose<Map<String, dynamic>, String>((ref, id) async {
-  final res = await ref.read(dioProvider).get('/candidates/$id');
-  return res.data['data'];
-});
-
-class CandidateDetailsScreen extends ConsumerStatefulWidget {
+class CandidateDetailsScreen extends StatelessWidget {
   final String id;
   const CandidateDetailsScreen({super.key, required this.id});
 
   @override
-  ConsumerState<CandidateDetailsScreen> createState() => _CandidateDetailsScreenState();
-}
-
-class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen> {
-  bool _isUpdating = false;
-
-  void _updateStatus(String newStatus) async {
-    if (newStatus == 'REJECTED' || newStatus == 'HIRED') {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirm Action'),
-          content: Text('Are you sure you want to mark this candidate as $newStatus? This is a high-impact action.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Confirm')),
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+            const SizedBox(width: 16),
+            const Text('Candidate Details', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate moved to next stage')));
+              },
+              child: const Text('Move to Next Stage'),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate rejected')));
+              },
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Reject'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Column(
+                children: [
+                  _buildPersonalCard(),
+                  const SizedBox(height: 24),
+                  _buildCareerCard(),
+                  const SizedBox(height: 24),
+                  _buildResumeCard(context),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 1,
+              child: _buildNotesCard(context),
+            )
           ],
         )
-      );
-      if (confirm != true) return;
-    }
-
-    setState(() => _isUpdating = true);
-    try {
-      await ref.read(dioProvider).put('/candidates/${widget.id}/status', data: {'status': newStatus});
-      ref.invalidate(candidateDetailProvider(widget.id));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
-    } finally {
-      if (mounted) setState(() => _isUpdating = false);
-    }
+      ],
+    );
   }
 
-  void _downloadResume(String storageKey) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Simulating download from GCS: $storageKey')));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final asyncData = ref.watch(candidateDetailProvider(widget.id));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Candidate Details'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/candidates')),
-      ),
-      body: asyncData.when(
-        data: (app) {
-          final candidate = app['candidate'];
-          return Padding(
-            padding: const EdgeInsets.all(32),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPersonalCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Personal Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+            const SizedBox(height: 24),
+            Row(
               children: [
-                Expanded(
-                  flex: 2,
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${candidate['firstName']} ${candidate['lastName']}', style: Theme.of(context).textTheme.headlineMedium),
-                          const SizedBox(height: 8),
-                          Text(candidate['email']),
-                          Text(candidate['phone'] ?? ''),
-                          const Divider(height: 32),
-                          const Text('Application Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          const SizedBox(height: 8),
-                          Text('Position: ${app['position']['title']}'),
-                          Text('Reference: ${app['referenceId']}'),
-                          Text('Experience: ${app['experienceYears']} Years'),
-                          Text('Current Role: ${app['currentRole'] ?? 'N/A'} at ${app['currentCompany'] ?? 'N/A'}'),
-                          const Divider(height: 32),
-                          const Text('Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          const SizedBox(height: 8),
-                          ...List.from(app['documents'] ?? []).map((doc) => ListTile(
-                            leading: const Icon(Icons.insert_drive_file),
-                            title: Text(doc['logicalName']),
-                            trailing: IconButton(icon: const Icon(Icons.download), onPressed: () => _downloadResume(doc['storageKey'])),
-                          )),
-                        ],
-                      ),
-                    ),
-                  ),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.blue.shade50,
+                  child: Text('JD', style: TextStyle(color: Colors.blue.shade700, fontSize: 24)),
                 ),
-                const SizedBox(width: 32),
+                const SizedBox(width: 24),
                 Expanded(
-                  flex: 1,
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          const SizedBox(height: 16),
-                          DropdownButton<String>(
-                            isExpanded: true,
-                            value: app['status'],
-                            items: const [
-                              DropdownMenuItem(value: 'APPLIED', child: Text('Applied')),
-                              DropdownMenuItem(value: 'REVIEWING', child: Text('Reviewing')),
-                              DropdownMenuItem(value: 'INTERVIEW', child: Text('Interview')),
-                              DropdownMenuItem(value: 'OFFER', child: Text('Offer')),
-                              DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-                              DropdownMenuItem(value: 'HIRED', child: Text('Hired')),
-                            ],
-                            onChanged: _isUpdating ? null : (v) => _updateStatus(v!),
-                          )
-                        ],
-                      ),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('John Doe', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Senior Flutter Developer', style: TextStyle(color: Colors.grey.shade700, fontSize: 16)),
+                    ],
                   ),
                 ),
               ],
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err')),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(child: _InfoItem(icon: Icons.email, label: 'Email', value: 'john.doe@example.com')),
+                Expanded(child: _InfoItem(icon: Icons.phone, label: 'Phone', value: '+1 234 567 8900')),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _InfoItem(icon: Icons.location_on, label: 'Location', value: 'New York, USA')),
+                Expanded(child: _InfoItem(icon: Icons.link, label: 'Portfolio', value: 'github.com/johndoe')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCareerCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Career Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(child: _InfoItem(icon: Icons.work, label: 'Total Experience', value: '5 Years')),
+                Expanded(child: _InfoItem(icon: Icons.timer, label: 'Notice Period', value: '30 Days')),
+                Expanded(child: _InfoItem(icon: Icons.attach_money, label: 'Expected Salary', value: '\$120,000')),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text('Skills', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Flutter', 'Dart', 'Firebase', 'Riverpod', 'REST API'].map((s) => Chip(
+                label: Text(s),
+                backgroundColor: Colors.blue.shade50,
+                side: BorderSide.none,
+              )).toList(),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResumeCard(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Resume', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 40),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('John_Doe_Resume.pdf', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('2.4 MB', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Preview'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Previewing John_Doe_Resume.pdf')));
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Download'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Downloading John_Doe_Resume.pdf')));
+                    },
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesCard(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Recruiter Notes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+            const SizedBox(height: 24),
+            TextField(
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Add a new note...',
+                filled: true,
+                fillColor: Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(onPressed: (){
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note added')));
+              }, child: const Text('Add Note')),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 24),
+            _NoteItem(name: 'Sarah Smith', time: '2 hours ago', text: 'Strong candidate. Great communication skills.'),
+            const SizedBox(height: 16),
+            _NoteItem(name: 'Mike Johnson', time: '1 day ago', text: 'Technical round passed with flying colors.'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _InfoItem({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.grey, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteItem extends StatelessWidget {
+  final String name;
+  final String time;
+  final String text;
+  const _NoteItem({required this.name, required this.time, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(radius: 12, backgroundColor: Colors.blue.shade100, child: Text(name[0], style: const TextStyle(fontSize: 10))),
+              const SizedBox(width: 8),
+              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Spacer(),
+              Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(text),
+        ],
       ),
     );
   }

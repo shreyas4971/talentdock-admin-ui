@@ -43,7 +43,7 @@ class _PositionEditScreenState extends ConsumerState<PositionEditScreen> {
       
       if (mounted) context.go('/positions');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(getFriendlyErrorMessage(e))));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -80,12 +80,13 @@ class _PositionEditScreenState extends ConsumerState<PositionEditScreen> {
                     TextField(controller: _deptCtrl, decoration: const InputDecoration(labelText: 'Department')),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _status,
+                      initialValue: _status,
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [
                         DropdownMenuItem(value: 'DRAFT', child: Text('Draft')),
-                        DropdownMenuItem(value: 'PUBLISHED', child: Text('Published')),
+                        DropdownMenuItem(value: 'OPEN', child: Text('Open')),
                         DropdownMenuItem(value: 'CLOSED', child: Text('Closed')),
+                        DropdownMenuItem(value: 'ARCHIVED', child: Text('Archived')),
                       ],
                       onChanged: (val) => setState(() => _status = val!),
                     ),
