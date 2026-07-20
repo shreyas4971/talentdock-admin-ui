@@ -27,35 +27,59 @@ class _PositionEditorScreenState extends State<PositionEditorScreen> {
         ),
         const SizedBox(height: 32),
         _buildSection('Basic Information', [
-          Row(children: [Expanded(child: _field('Job Title')), const SizedBox(width: 16), Expanded(child: _field('Department'))]),
-          Row(children: [
-            Expanded(child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Employment Type'), 
-              items: ['Full-time', 'Part-time', 'Contract', 'Internship'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
-              onChanged: (v){}
-            )),
-            const SizedBox(width: 16),
-            Expanded(child: _field('Location')),
-          ]),
-          Row(children: [
-            Expanded(child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Status'), 
-              items: ['Draft', 'Published', 'Archived'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
-              onChanged: (v){}
-            ))
-          ]),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Job Title')),
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Department')),
+            ],
+          ),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Employment Type'), 
+                items: ['Full-time', 'Part-time', 'Contract', 'Internship'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
+                onChanged: (v){}
+              )),
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Location')),
+            ],
+          ),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Status'), 
+                items: ['Draft', 'Published', 'Archived'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
+                onChanged: (v){}
+              )),
+            ],
+          ),
         ]),
         _buildSection('Candidate Requirements', [
-          Row(children: [Expanded(child: _field('Minimum Experience')), const SizedBox(width: 16), Expanded(child: _field('Maximum Experience'))]),
-          Row(children: [
-            Expanded(child: _field('Relevant Experience Required')), 
-            const SizedBox(width: 16), 
-            Expanded(child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Maximum Notice Period'), 
-              items: ['Immediate', '15 Days', '30 Days', '60 Days', '90+ Days'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
-              onChanged: (v){}
-            ))
-          ]),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Minimum Experience')),
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Maximum Experience')),
+            ],
+          ),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: _field('Relevant Experience Required')), 
+              SizedBox(width: MediaQuery.of(context).size.width >= 800 ? (MediaQuery.of(context).size.width > 1200 ? 300 : 250) : double.infinity, child: DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Maximum Notice Period'), 
+                items: ['Immediate', '15 Days', '30 Days', '60 Days', '90+ Days'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), 
+                onChanged: (v){}
+              )),
+            ],
+          ),
           CheckboxListTile(
             title: const Text('Immediate Joiner Required'),
             contentPadding: EdgeInsets.zero,

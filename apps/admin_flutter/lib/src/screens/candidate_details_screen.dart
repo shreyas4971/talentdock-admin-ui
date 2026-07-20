@@ -7,6 +7,7 @@ class CandidateDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -14,47 +15,87 @@ class CandidateDetailsScreen extends StatelessWidget {
           children: [
             IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
             const SizedBox(width: 16),
-            const Text('Candidate Details', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate moved to next stage')));
-              },
-              child: const Text('Move to Next Stage'),
-            ),
-            const SizedBox(width: 16),
-            OutlinedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate rejected')));
-              },
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Reject'),
-            ),
+            const Expanded(child: Text('Candidate Details', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+            if (isDesktop) const Spacer(),
+            if (isDesktop)
+              ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate moved to next stage')));
+                },
+                child: const Text('Move to Next Stage'),
+              ),
+            if (isDesktop) const SizedBox(width: 16),
+            if (isDesktop)
+              OutlinedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate rejected')));
+                },
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Reject'),
+              ),
           ],
         ),
+        if (!isDesktop) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate moved to next stage')));
+                  },
+                  child: const Text('Move Stage'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate rejected')));
+                  },
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text('Reject'),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 32),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Column(
+        isDesktop
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      children: [
+                        _buildPersonalCard(),
+                        const SizedBox(height: 24),
+                        _buildCareerCard(),
+                        const SizedBox(height: 24),
+                        _buildResumeCard(context),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 1,
+                    child: _buildNotesCard(context),
+                  )
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildPersonalCard(),
                   const SizedBox(height: 24),
                   _buildCareerCard(),
                   const SizedBox(height: 24),
                   _buildResumeCard(context),
+                  const SizedBox(height: 24),
+                  _buildNotesCard(context),
                 ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 1,
-              child: _buildNotesCard(context),
-            )
-          ],
-        )
+              )
       ],
     );
   }
