@@ -100,8 +100,33 @@ class DashboardScreen extends StatelessWidget {
                     backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
                     child: Text('${index + 1}', style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
                   ),
-                  title: Text(position['title'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text('${position['applications']} applicants', style: TextStyle(color: Colors.grey.shade600)),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          position['title'] as String,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (position['pinned'] == true) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.push_pin, size: 16, color: Colors.blueAccent),
+                      ],
+                    ],
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Row(
+                      children: [
+                        Text('${position['applications']} applicants', style: TextStyle(color: Colors.grey.shade600)),
+                        const SizedBox(width: 12),
+                        const Text('•', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const SizedBox(width: 12),
+                        Text(_formatTimeLive(position['postedDate'] as String), style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                      ],
+                    ),
+                  ),
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -134,6 +159,16 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatTimeLive(String isoDate) {
+    final date = DateTime.parse(isoDate);
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays == 0) return 'Live today';
+    if (diff.inDays == 1) return 'Live 1 day';
+    if (diff.inDays < 30) return 'Live ${diff.inDays} days';
+    if (diff.inDays < 365) return 'Live ${(diff.inDays / 30).floor()} months';
+    return 'Live ${(diff.inDays / 365).floor()} years';
   }
 
   Widget _buildQuickActions(BuildContext context) {
