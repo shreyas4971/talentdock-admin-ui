@@ -32,7 +32,7 @@ class DashboardScreen extends StatelessWidget {
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 2, child: _buildPositionApplicationSummary()),
+                  Expanded(flex: 2, child: _buildPositionApplicationSummary(context)),
                   const SizedBox(width: 32),
                   Expanded(flex: 1, child: _buildQuickActions(context)),
                 ],
@@ -40,7 +40,7 @@ class DashboardScreen extends StatelessWidget {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPositionApplicationSummary(),
+                  _buildPositionApplicationSummary(context),
                   const SizedBox(height: 32),
                   _buildQuickActions(context),
                 ],
@@ -49,7 +49,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPositionApplicationSummary() {
+  Widget _buildPositionApplicationSummary(BuildContext context) {
     List<Map<String, dynamic>> positions = List.from(mockPositions);
     
     List<Map<String, dynamic>> pinnedPositions = positions.where((p) => p['pinned'] == true).toList();
