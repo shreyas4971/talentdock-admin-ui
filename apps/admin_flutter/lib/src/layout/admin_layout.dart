@@ -42,12 +42,58 @@ class AdminLayout extends StatelessWidget {
           }),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile menu opened')));
+            child: PopupMenuButton<String>(
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tooltip: 'Account Details',
+              onSelected: (value) {
+                if (value == 'logout') {
+                  context.go('/login'); // Assuming /login route exists based on directory listing
+                } else if (value == 'settings') {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings opened')));
+                }
               },
-              borderRadius: BorderRadius.circular(20),
-              child: const CircleAvatar(backgroundColor: Colors.blueAccent, child: Text('A', style: TextStyle(color: Colors.white))),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  enabled: false,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Admin User', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                        SizedBox(height: 4),
+                        Text('admin@talentdock.com', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings, size: 20),
+                      SizedBox(width: 12),
+                      Text('Account Settings'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 20, color: Colors.red),
+                      SizedBox(width: 12),
+                      Text('Logout', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+              child: const CircleAvatar(
+                backgroundColor: Colors.blueAccent,
+                child: Text('A', style: TextStyle(color: Colors.white)),
+              ),
             ),
           )
         ],
@@ -98,18 +144,23 @@ class _NavItem extends StatelessWidget {
     final isActive = route == '/' ? currentPath == '/' : currentPath.startsWith(route);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        leading: Icon(icon, color: isActive ? Colors.white : Colors.black54),
-        title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-        selected: isActive,
-        selectedTileColor: Colors.blueAccent,
-        onTap: () {
-          if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
-            Navigator.pop(context);
-          }
-          context.go(route);
-        },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blueAccent : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          leading: Icon(icon, color: isActive ? Colors.white : Colors.black54),
+          title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.black87, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+          selected: isActive,
+          onTap: () {
+            if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+              Navigator.pop(context);
+            }
+            context.go(route);
+          },
+        ),
       ),
     );
   }
