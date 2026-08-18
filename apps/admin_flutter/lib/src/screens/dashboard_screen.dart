@@ -50,7 +50,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildPositionApplicationSummary(BuildContext context) {
-    List<Map<String, dynamic>> positions = List.from(mockPositions);
+    List<Map<String, dynamic>> positions = mockPositions.toList();
     
     List<Map<String, dynamic>> pinnedPositions = positions.where((p) => p['pinned'] == true).toList();
     List<Map<String, dynamic>> unpinnedPositions = positions.where((p) => p['pinned'] != true).toList();
