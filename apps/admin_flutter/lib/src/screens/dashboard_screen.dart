@@ -86,17 +86,46 @@ class DashboardScreen extends StatelessWidget {
             ...finalPositions.asMap().entries.map((entry) {
               int index = entry.key;
               var position = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              return Card(
+                elevation: 0,
+                color: Colors.transparent,
+                margin: const EdgeInsets.only(bottom: 8.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
+                child: ExpansionTile(
+                  shape: const Border(),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
+                    child: Text('${index + 1}', style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                  ),
+                  title: Text(position['title'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text('${position['applications']} applicants', style: TextStyle(color: Colors.grey.shade600)),
                   children: [
-                    Text('${index + 1}. ${position['title']}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
                     Padding(
-                      padding: const EdgeInsets.only(left: 16.0),
-                      child: Text('• ${position['applications']} applicants', style: TextStyle(color: Colors.grey.shade600)),
-                    ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {},
+                            icon: Icon(position['pinned'] == true ? Icons.push_pin : Icons.push_pin_outlined, size: 18),
+                            label: Text(position['pinned'] == true ? 'Unpin' : 'Pin'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => context.go('/candidates'), // Mock routing to candidates list
+                            icon: const Icon(Icons.people_outline, size: 18),
+                            label: const Text('Applicants'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                            label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    )
                   ],
                 ),
               );
