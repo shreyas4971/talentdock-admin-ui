@@ -238,7 +238,12 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                     const SizedBox(height: 24),
                                     DropdownButtonFormField<String>(
                                       decoration: InputDecoration(
-                                        labelText: 'Highest Education *',
+                                        label: const Text.rich(
+                                          TextSpan(
+                                            text: 'Highest Education',
+                                            children: [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
+                                          ),
+                                        ),
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
                                       value: _highestEducation,
@@ -248,7 +253,13 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                       validator: (v) => v == null ? 'Required' : null,
                                     ),
                                     const SizedBox(height: 24),
-                                    const Text('Current Status *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const Text.rich(
+                                      TextSpan(
+                                        text: 'Current Status',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        children: [TextSpan(text: ' *', style: TextStyle(color: Colors.red))],
+                                      ),
+                                    ),
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
@@ -466,11 +477,22 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {String? Function(String?)? validator, int maxLines = 1, bool isNumber = false}) {
+  Widget _buildTextField(String labelText, TextEditingController controller, {String? Function(String?)? validator, int maxLines = 1, bool isNumber = false}) {
+    final bool isRequired = labelText.contains('*');
+    final String cleanLabel = labelText.replaceAll(' *', '');
+
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
-        labelText: label,
+        label: Text.rich(
+          TextSpan(
+            text: cleanLabel,
+            children: [
+              if (isRequired)
+                const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
       maxLines: maxLines,
