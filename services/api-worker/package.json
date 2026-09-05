@@ -1,0 +1,25 @@
+{
+  "name": "talentdock-api-worker",
+  "version": "1.0.0",
+  "description": "TalentDock Cloudflare Worker Backend API with Hono, D1, and R2",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate:local": "wrangler d1 migrations apply talentdock-db --local",
+    "drizzle:migrate:remote": "wrangler d1 migrations apply talentdock-db --remote",
+    "seed:local": "wrangler d1 execute talentdock-db --local --file=./src/seeds/seed.sql"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.30.10",
+    "hono": "^4.3.11"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240512.0",
+    "drizzle-kit": "^0.20.18",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.57.1"
+  }
+}

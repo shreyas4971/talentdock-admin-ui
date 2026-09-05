@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import '../mock_data.dart';
+import '../api_client.dart';
 
 class ApplicationFormScreen extends StatefulWidget {
   final String positionId;
@@ -14,6 +16,11 @@ class ApplicationFormScreen extends StatefulWidget {
 
 class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
   late int _currentStep;
+  final _apiClient = CandidateApiClient(Dio(BaseOptions(
+    baseUrl: apiBaseUrl,
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 10),
+  )));
   
   @override
   void initState() {
@@ -62,13 +69,12 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
 
   // Step 4: Resume
   PlatformFile? _resumeFile;
-  final List<PlatformFile> _additionalFiles = [];
   bool _declarationChecked = false;
   bool _isSubmitting = false;
 
   void _submit() async {
     if (_resumeFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload your resume.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload your resume (PDF only, maximum 2 MB).')));
       return;
     }
     if (!_declarationChecked) {
@@ -78,11 +84,53 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
 
     setState(() => _isSubmitting = true);
     
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (mounted) {
-      context.go('/success?refId=REC-2026-000021&email=${_emailCtrl.text}');
+    try {
+      final result = await _apiClient.submitApplication(
+        positionId: widget.positionId,
+        firstName: _firstNameCtrl.text,
+        lastName: _lastNameCtrl.text,
+        email: _emailCtrl.text,
+        phone: _mobileCtrl.text,
+        city: _cityCtrl.text,
+        state: _stateCtrl.text,
+        dob: _dobCtrl.text,
+        highestEducation: _highestEducation,
+        empStatus: _empStatus,
+        totalExp: _totalExpCtrl.text,
+        currentCompany: _currentCompanyCtrl.text,
+        currentDesignation: _currentDesignationCtrl.text,
+        expectedSalary: _expectedSalaryCtrl.text,
+        currentSalary: _currentSalaryCtrl.text,
+        noticePeriod: _noticePeriodCtrl.text,
+        joiningDate: _joiningDateCtrl.text,
+        additionalInfo: _additionalInfoCtrl.text,
+        resumeFile: _resumeFile!,
+      );
+
+      final refId = result['referenceId'];
+      final email = result['candidateEmail'] ?? result['email'] ?? _emailCtrl.text;
+      
+      if (refId != null && mounted) {
+        context.go('/success?refId=$refId&email=$email');
+      } else if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to submit application. Please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(getFriendlyErrorMessage(e)),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -359,8 +407,13 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Resume Upload', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 24),
+                                    const Text('Resume (PDF only, maximum 2 MB)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Upload your most recent resume as a PDF. Maximum file size: 2 MB.',
+                                      style: TextStyle(color: Colors.black87, fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 20),
                                     Card(
                                       color: Colors.blue.shade50,
                                       elevation: 0,
@@ -378,7 +431,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                                 children: [
                                                   Text('Recommended Resume File Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
                                                   SizedBox(height: 8),
-                                                  Text('Please name your resume using the following format: FirstName_LastName.pdf\n\nExamples: John_Smith.pdf, Priya_Patel.docx\nIf you only have one name, simply use your first name. Don\'t worry if your file has a different name, it will be renamed automatically. This is only a recommendation.', style: TextStyle(height: 1.4)),
+                                                  Text('Please name your resume using the following format: FirstName_LastName.pdf (e.g. John_Smith.pdf). This is only a recommendation.', style: TextStyle(height: 1.4)),
                                                 ],
                                               ),
                                             ),
@@ -386,16 +439,37 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 32),
+                                    const SizedBox(height: 24),
                                     InkWell(
                                       onTap: () async {
-                                        final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
-                                        if (result != null) setState(() => _resumeFile = result.files.first);
+                                        final result = await FilePicker.platform.pickFiles(
+                                          type: FileType.custom,
+                                          allowedExtensions: ['pdf'],
+                                          withData: true,
+                                        );
+                                        if (result != null && result.files.isNotEmpty) {
+                                          final file = result.files.first;
+                                          final isPdf = file.name.toLowerCase().endsWith('.pdf');
+                                          final isUnder2Mb = file.size <= 2 * 1024 * 1024;
+                                          if (!isPdf || !isUnder2Mb) {
+                                            setState(() => _resumeFile = null);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Invalid file. Please select a genuine PDF document up to 2 MB.'),
+                                                  backgroundColor: Colors.redAccent,
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            setState(() => _resumeFile = file);
+                                          }
+                                        }
                                       },
                                       borderRadius: BorderRadius.circular(16),
                                       child: Container(
                                         width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 32),
+                                        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 32),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           border: Border.all(color: Colors.teal.withOpacity(0.3), width: 2, style: BorderStyle.solid),
@@ -407,51 +481,17 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                                             const SizedBox(height: 16),
                                             Text(
                                               _resumeFile != null ? 'Selected: ${_resumeFile!.name}' : 'Drag & Drop your resume here, or Click to Browse',
-                                              style: TextStyle(fontSize: 16, color: _resumeFile != null ? Colors.teal : Colors.black87, fontWeight: _resumeFile != null ? FontWeight.bold : FontWeight.bold),
+                                              style: TextStyle(fontSize: 16, color: _resumeFile != null ? Colors.teal : Colors.black87, fontWeight: FontWeight.bold),
                                               textAlign: TextAlign.center,
                                             ),
-                                            if (_resumeFile == null)
-                                              const Padding(
-                                                padding: EdgeInsets.only(top: 8.0),
-                                                child: Text('Supported formats: PDF, DOC, DOCX', style: TextStyle(color: Colors.black54, fontSize: 14)),
-                                              ),
+                                            const Padding(
+                                              padding: EdgeInsets.only(top: 8.0),
+                                              child: Text('Supported format: PDF only (Maximum 2 MB)', style: TextStyle(color: Colors.black54, fontSize: 14)),
+                                            ),
                                           ],
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 32),
-                                    const Text('Additional Documents (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                    const SizedBox(height: 8),
-                                    const Text('Cover Letter, Certificates, Portfolio, or other supporting files.', style: TextStyle(color: Colors.black54)),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: () async {
-                                        final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-                                        if (result != null) setState(() => _additionalFiles.addAll(result.files));
-                                      },
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Add Document'),
-                                    ),
-                                    if (_additionalFiles.isNotEmpty) ...[
-                                      const SizedBox(height: 16),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: _additionalFiles.map((f) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 8.0),
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.insert_drive_file, size: 16, color: Colors.grey),
-                                              const SizedBox(width: 8),
-                                              Text(f.name),
-                                              IconButton(
-                                                icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                                                onPressed: () => setState(() => _additionalFiles.remove(f)),
-                                              )
-                                            ],
-                                          ),
-                                        )).toList(),
-                                      )
-                                    ],
                                     const SizedBox(height: 32),
                                     CheckboxListTile(
                                       contentPadding: EdgeInsets.zero,

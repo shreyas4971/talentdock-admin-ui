@@ -1,0 +1,20 @@
+name = "talentdock-api-worker"
+main = "src/index.ts"
+compatibility_date = "2024-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+JWT_SECRET = "talentdock-dev-secret-key-2026"
+CORS_ORIGINS = "*"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "talentdock-db"
+database_id = "local-talentdock-db-id"
+migrations_dir = "drizzle"
+
+[[r2_buckets]]
+binding = "RESUMES_BUCKET"
+bucket_name = "talentdock-resumes"
+preview_bucket_name = "talentdock-resumes-local"
