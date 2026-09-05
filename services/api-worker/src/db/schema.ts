@@ -19,6 +19,12 @@ export const positions = sqliteTable('positions', {
   location: text('location').notNull().default('Remote'),
   employmentType: text('employment_type').notNull().default('Full-time'),
   experience: text('experience').notNull().default('1-3 Years'),
+  minExperience: integer('min_experience').default(0),
+  maxExperience: integer('max_experience').default(5),
+  relevantExperience: integer('relevant_experience').default(0),
+  noticePeriod: text('notice_period').default('30 Days'),
+  immediateJoiner: integer('immediate_joiner', { mode: 'boolean' }).default(false),
+  skills: text('skills').default('[]'),
   status: text('status').notNull().default('DRAFT'), // DRAFT, PUBLISHED, ARCHIVED
   isPinned: integer('is_pinned', { mode: 'boolean' }).notNull().default(false),
   shortDescription: text('short_description'),

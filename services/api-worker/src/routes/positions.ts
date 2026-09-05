@@ -12,6 +12,7 @@ function formatPosition(p: typeof positions.$inferSelect) {
   let responsibilities: string[] = [];
   let requirements: string[] = [];
   let benefits: string[] = [];
+  let skills: string[] = [];
 
   try {
     if (p.responsibilities) responsibilities = JSON.parse(p.responsibilities);
@@ -22,6 +23,15 @@ function formatPosition(p: typeof positions.$inferSelect) {
   try {
     if (p.benefits) benefits = JSON.parse(p.benefits);
   } catch {}
+  try {
+    if (p.skills) skills = JSON.parse(p.skills);
+  } catch {}
+
+  const minExp = p.minExperience ?? 0;
+  const maxExp = p.maxExperience ?? 5;
+  const expDisplay = p.experience && p.experience !== '1-3 Years'
+    ? p.experience
+    : (minExp || maxExp ? `${minExp}-${maxExp} Years` : '1-3 Years');
 
   return {
     id: p.id,
@@ -30,7 +40,19 @@ function formatPosition(p: typeof positions.$inferSelect) {
     location: p.location,
     employmentType: p.employmentType,
     type: p.employmentType, // compatibility alias
-    experience: p.experience,
+    experience: expDisplay,
+    minExperience: minExp,
+    minExp,
+    maxExperience: maxExp,
+    maxExp,
+    relevantExperience: p.relevantExperience ?? 0,
+    noticePeriod: p.noticePeriod ?? '30 Days',
+    maxNoticePeriod: p.noticePeriod ?? '30 Days',
+    immediateJoiner: Boolean(p.immediateJoiner),
+    immediateJoinerRequired: Boolean(p.immediateJoiner),
+    skills,
+    specifications: skills,
+    specs: skills,
     status: p.status,
     pinned: p.isPinned,
     isPinned: p.isPinned,
@@ -130,13 +152,34 @@ positionsRoute.post('/', authMiddleware as any, async (c) => {
     const now = new Date().toISOString();
     const id = `pos-${Date.now().toString(36)}`;
 
+    const minExp = body.minExperience !== undefined ? Number(body.minExperience) : (body.minExp !== undefined ? Number(body.minExp) : 0);
+    const maxExp = body.maxExperience !== undefined ? Number(body.maxExperience) : (body.maxExp !== undefined ? Number(body.maxExp) : 5);
+    const expStr = body.experience || (minExp || maxExp ? `${minExp}-${maxExp} Years` : '1-3 Years');
+
+    let skillsStr = '[]';
+    if (Array.isArray(body.skills)) {
+      skillsStr = JSON.stringify(body.skills);
+    } else if (Array.isArray(body.specifications)) {
+      skillsStr = JSON.stringify(body.specifications);
+    } else if (Array.isArray(body.specs)) {
+      skillsStr = JSON.stringify(body.specs);
+    } else if (typeof body.skills === 'string') {
+      skillsStr = body.skills;
+    }
+
     const newPosition = {
       id,
       title: body.title || 'Untitled Position',
       department: body.department || 'Engineering',
       location: body.location || 'Remote',
       employmentType: body.employmentType || body.type || 'Full-time',
-      experience: body.experience || '1-3 Years',
+      experience: expStr,
+      minExperience: minExp,
+      maxExperience: maxExp,
+      relevantExperience: body.relevantExperience !== undefined ? Number(body.relevantExperience) : 0,
+      noticePeriod: body.noticePeriod || body.maxNoticePeriod || '30 Days',
+      immediateJoiner: Boolean(body.immediateJoiner || body.immediateJoinerRequired),
+      skills: skillsStr,
       status: (body.status || 'DRAFT').toUpperCase(),
       isPinned: body.pinned ?? body.isPinned ?? false,
       shortDescription: body.shortDescription || '',
@@ -182,12 +225,41 @@ positionsRoute.put('/:id', authMiddleware as any, async (c) => {
     if (body.location !== undefined) updates.location = body.location;
     if (body.employmentType !== undefined) updates.employmentType = body.employmentType;
     if (body.type !== undefined) updates.employmentType = body.type;
-    if (body.experience !== undefined) updates.experience = body.experience;
     if (body.status !== undefined) updates.status = body.status.toUpperCase();
     if (body.pinned !== undefined) updates.isPinned = body.pinned;
     if (body.isPinned !== undefined) updates.isPinned = body.isPinned;
     if (body.shortDescription !== undefined) updates.shortDescription = body.shortDescription;
     if (body.description !== undefined) updates.description = body.description;
+    
+    if (body.minExperience !== undefined) updates.minExperience = Number(body.minExperience);
+    else if (body.minExp !== undefined) updates.minExperience = Number(body.minExp);
+    
+    if (body.maxExperience !== undefined) updates.maxExperience = Number(body.maxExperience);
+    else if (body.maxExp !== undefined) updates.maxExperience = Number(body.maxExp);
+    
+    if (body.relevantExperience !== undefined) updates.relevantExperience = Number(body.relevantExperience);
+    if (body.noticePeriod !== undefined) updates.noticePeriod = String(body.noticePeriod);
+    else if (body.maxNoticePeriod !== undefined) updates.noticePeriod = String(body.maxNoticePeriod);
+    
+    if (body.immediateJoiner !== undefined) updates.immediateJoiner = Boolean(body.immediateJoiner);
+    else if (body.immediateJoinerRequired !== undefined) updates.immediateJoiner = Boolean(body.immediateJoinerRequired);
+
+    if (body.skills !== undefined) {
+      updates.skills = Array.isArray(body.skills) ? JSON.stringify(body.skills) : String(body.skills);
+    } else if (body.specifications !== undefined) {
+      updates.skills = Array.isArray(body.specifications) ? JSON.stringify(body.specifications) : String(body.specifications);
+    } else if (body.specs !== undefined) {
+      updates.skills = Array.isArray(body.specs) ? JSON.stringify(body.specs) : String(body.specs);
+    }
+
+    if (body.experience !== undefined) {
+      updates.experience = body.experience;
+    } else if (body.minExperience !== undefined || body.maxExperience !== undefined || body.minExp !== undefined || body.maxExp !== undefined) {
+      const minE = updates.minExperience ?? existing.minExperience ?? 0;
+      const maxE = updates.maxExperience ?? existing.maxExperience ?? 5;
+      updates.experience = `${minE}-${maxE} Years`;
+    }
+
     if (body.responsibilities !== undefined) {
       updates.responsibilities = Array.isArray(body.responsibilities) ? JSON.stringify(body.responsibilities) : body.responsibilities;
     }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,7 +26,7 @@ class _PositionEditorScreenState extends ConsumerState<PositionEditorScreen> {
   String _status = 'Draft';
   String _noticePeriod = '30 Days';
   bool _immediateJoiner = false;
-  List<String> _specs = ['Flutter', 'Riverpod', 'REST API'];
+  List<String> _specs = [];
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -60,9 +61,16 @@ class _PositionEditorScreenState extends ConsumerState<PositionEditorScreen> {
           _titleController.text = pos['title']?.toString() ?? '';
           _deptController.text = pos['department']?.toString() ?? '';
           _locationController.text = pos['location']?.toString() ?? '';
-          _minExpController.text = (pos['minExperience'] ?? pos['minExp'] ?? '').toString();
-          _maxExpController.text = (pos['maxExperience'] ?? pos['maxExp'] ?? '').toString();
-          _relevantExpController.text = (pos['relevantExperience'] ?? '').toString();
+          
+          final minE = pos['minExperience'] ?? pos['minExp'];
+          _minExpController.text = minE != null ? minE.toString() : '';
+          
+          final maxE = pos['maxExperience'] ?? pos['maxExp'];
+          _maxExpController.text = maxE != null ? maxE.toString() : '';
+          
+          final relE = pos['relevantExperience'];
+          _relevantExpController.text = relE != null ? relE.toString() : '';
+          
           _descriptionController.text = pos['description']?.toString() ?? '';
           
           final emp = pos['employmentType']?.toString() ?? pos['type']?.toString();
@@ -92,7 +100,18 @@ class _PositionEditorScreenState extends ConsumerState<PositionEditorScreen> {
           if (rawSpecs is List) {
             _specs = rawSpecs.map((e) => e.toString()).toList();
           } else if (rawSpecs is String && rawSpecs.isNotEmpty) {
-            _specs = rawSpecs.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+            try {
+              final decoded = jsonDecode(rawSpecs);
+              if (decoded is List) {
+                _specs = decoded.map((e) => e.toString()).toList();
+              } else {
+                _specs = rawSpecs.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+              }
+            } catch (_) {
+              _specs = rawSpecs.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+            }
+          } else {
+            _specs = [];
           }
         });
       }
