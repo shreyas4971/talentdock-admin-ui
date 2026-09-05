@@ -211,17 +211,28 @@ applicationsRoute.post('/', async (c) => {
     const applicationId = `app-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const referenceId = await generateReferenceId(db);
 
-    await db.insert(applications).values({
-      id: applicationId,
-      referenceId,
-      candidateId,
-      positionId,
-      status: 'APPLIED',
-      hasDecision: false,
-      isOpened: false,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    try {
+      await db.insert(applications).values({
+        id: applicationId,
+        referenceId,
+        candidateId,
+        positionId,
+        status: 'APPLIED',
+        hasDecision: false,
+        isOpened: false,
+        createdAt: now,
+        updatedAt: now,
+      }).run();
+    } catch (insertErr: any) {
+      const errMsg = (insertErr?.message || '').toLowerCase();
+      if (errMsg.includes('unique') || errMsg.includes('constraint') || errMsg.includes('applications_candidate_position')) {
+        return c.json({
+          success: false,
+          message: 'You have already applied for this position.',
+        }, 409);
+      }
+      throw insertErr;
+    }
 
     // 3. Upload Resume to R2 & persist metadata in D1
     const cleanFirstName = (firstName || '').trim();

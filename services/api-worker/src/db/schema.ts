@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // 1. Users (Admin Auth)
 export const users = sqliteTable('users', {
@@ -77,6 +77,7 @@ export const applications = sqliteTable('applications', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, (table) => ({
+  candidatePositionUnique: uniqueIndex('applications_candidate_position_unique_idx').on(table.candidateId, table.positionId),
   candidateIdx: index('applications_candidate_idx').on(table.candidateId),
   positionIdx: index('applications_position_idx').on(table.positionId),
   statusIdx: index('applications_status_idx').on(table.status),
