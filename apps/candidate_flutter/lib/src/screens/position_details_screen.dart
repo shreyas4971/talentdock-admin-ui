@@ -105,12 +105,6 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
     final benefits = parseList(pos['benefits']);
     final skills = parseList(pos['skills'] ?? pos['specifications'] ?? pos['specs']);
 
-    final hasCandidateReqs = (minExp != null && minExp.toString() != '0') ||
-        (maxExp != null && maxExp.toString() != '0') ||
-        (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty) ||
-        (noticePeriod != null && noticePeriod.isNotEmpty) ||
-        immediateJoiner;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Job Details', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -131,6 +125,12 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
                   _buildIconChip(Icons.location_on, location),
                   _buildIconChip(Icons.work_outline, employmentType),
                   _buildIconChip(Icons.access_time, experience),
+                  if (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty)
+                    _buildIconChip(Icons.stars_outlined, '$relevantExp Yrs Relevant Exp'),
+                  if (noticePeriod != null && noticePeriod.isNotEmpty)
+                    _buildIconChip(Icons.calendar_month_outlined, 'Notice: $noticePeriod'),
+                  if (immediateJoiner)
+                    _buildIconChip(Icons.bolt, 'Immediate Joiner Required', color: Colors.orange.shade800),
                 ],
               ),
               if (description.isNotEmpty) ...[
@@ -152,31 +152,6 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
                     side: BorderSide(color: Colors.teal.shade200),
                     avatar: const Icon(Icons.check_circle_outline, size: 18, color: Colors.teal),
                   )).toList(),
-                ),
-              ],
-              if (hasCandidateReqs) ...[
-                const SizedBox(height: 36),
-                const Text('Candidate Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    children: [
-                      if (minExp != null || maxExp != null)
-                        _buildRequirementRow('Overall Experience', '${minExp ?? 0} to ${maxExp ?? 5} Years'),
-                      if (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty)
-                        _buildRequirementRow('Relevant Experience Required', '$relevantExp Years'),
-                      if (noticePeriod != null && noticePeriod.isNotEmpty)
-                        _buildRequirementRow('Maximum Notice Period', noticePeriod),
-                      if (immediateJoiner)
-                        _buildRequirementRow('Immediate Joiner', 'Required (Immediate availability preferred)'),
-                    ],
-                  ),
                 ),
               ],
               if (responsibilities.isNotEmpty) ...[
@@ -215,24 +190,6 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildRequirementRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 220,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87, fontSize: 15)),
-          ),
-          Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.black87, fontSize: 15)),
-          ),
-        ],
       ),
     );
   }
