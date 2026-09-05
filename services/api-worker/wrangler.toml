@@ -4,14 +4,13 @@ compatibility_date = "2024-05-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-ENVIRONMENT = "development"
-JWT_SECRET = "talentdock-dev-secret-key-2026"
+ENVIRONMENT = "production"
 CORS_ORIGINS = "*"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "talentdock-db"
-database_id = "local-talentdock-db-id"
+database_id = "f38d3842-4ad5-4bdb-9807-d8ae56c91bfc"
 migrations_dir = "drizzle"
 
 [[r2_buckets]]
