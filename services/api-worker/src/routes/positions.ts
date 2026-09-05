@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, desc, count, or, sql } from 'drizzle-orm';
 import { Env } from '../types';
 import { getDb } from '../db/client';
-import { positions, applications } from '../db/schema';
+import { positions, applications, candidateDocuments, candidateTimeline } from '../db/schema';
 import { authMiddleware } from '../middleware/auth';
 
 const positionsRoute = new Hono<{ Bindings: Env }>();
@@ -221,17 +221,18 @@ positionsRoute.delete('/:id', authMiddleware as any, async (c) => {
     }
 
     const apps = await db.select().from(applications).where(eq(applications.positionId, id)).all();
-    if (apps.length > 0) {
-      // Archive position if applications exist to preserve history
-      await db.update(positions).set({ status: 'ARCHIVED', updatedAt: new Date().toISOString() }).where(eq(positions.id, id)).run();
-    } else {
-      // Hard delete if no applications exist
-      await db.delete(positions).where(eq(positions.id, id)).run();
+    for (const app of apps) {
+      await db.delete(candidateDocuments).where(eq(candidateDocuments.applicationId, app.id)).run();
+      await db.delete(candidateTimeline).where(eq(candidateTimeline.applicationId, app.id)).run();
     }
+    if (apps.length > 0) {
+      await db.delete(applications).where(eq(applications.positionId, id)).run();
+    }
+    await db.delete(positions).where(eq(positions.id, id)).run();
 
-    return c.json({ success: true, message: 'Position removed successfully' });
+    return c.json({ success: true, message: 'Position deleted successfully' });
   } catch (error: any) {
-    return c.json({ success: false, message: error.message || 'Failed to remove position' }, 500);
+    return c.json({ success: false, message: error.message || 'Failed to delete position' }, 500);
   }
 });
 
