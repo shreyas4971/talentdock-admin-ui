@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, desc, count } from 'drizzle-orm';
+import { eq, desc, count, or, sql } from 'drizzle-orm';
 import { Env } from '../types';
 import { getDb } from '../db/client';
 import { positions, applications } from '../db/schema';
@@ -52,7 +52,7 @@ positionsRoute.get('/public', async (c) => {
     const posList = await db
       .select()
       .from(positions)
-      .where(eq(positions.status, 'PUBLISHED'))
+      .where(or(eq(positions.status, 'PUBLISHED'), eq(positions.status, 'published'), eq(positions.status, 'Published')))
       .orderBy(desc(positions.createdAt))
       .all();
 
@@ -137,7 +137,7 @@ positionsRoute.post('/', authMiddleware as any, async (c) => {
       location: body.location || 'Remote',
       employmentType: body.employmentType || body.type || 'Full-time',
       experience: body.experience || '1-3 Years',
-      status: body.status || 'DRAFT',
+      status: (body.status || 'DRAFT').toUpperCase(),
       isPinned: body.pinned ?? body.isPinned ?? false,
       shortDescription: body.shortDescription || '',
       description: body.description || '',
@@ -183,7 +183,7 @@ positionsRoute.put('/:id', authMiddleware as any, async (c) => {
     if (body.employmentType !== undefined) updates.employmentType = body.employmentType;
     if (body.type !== undefined) updates.employmentType = body.type;
     if (body.experience !== undefined) updates.experience = body.experience;
-    if (body.status !== undefined) updates.status = body.status;
+    if (body.status !== undefined) updates.status = body.status.toUpperCase();
     if (body.pinned !== undefined) updates.isPinned = body.pinned;
     if (body.isPinned !== undefined) updates.isPinned = body.isPinned;
     if (body.shortDescription !== undefined) updates.shortDescription = body.shortDescription;

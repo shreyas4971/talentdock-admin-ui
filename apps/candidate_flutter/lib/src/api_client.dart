@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -12,8 +13,8 @@ const String apiBaseUrl = String.fromEnvironment(
 final dioProvider = Provider<Dio>((ref) {
   return Dio(BaseOptions(
     baseUrl: apiBaseUrl,
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 10),
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
   ));
 });
 
@@ -85,37 +86,42 @@ class CandidateApiClient {
       throw Exception('Backend server is not connected. Real applications require an active backend.');
     }
 
+    if (resumeFile.bytes == null || resumeFile.bytes!.isEmpty) {
+      throw Exception('Resume file content is missing or unreadable. Please select your PDF resume again.');
+    }
+
     final formData = FormData();
 
     // Form text fields
     formData.fields.addAll([
       MapEntry('positionId', positionId),
-      MapEntry('firstName', firstName),
-      MapEntry('lastName', lastName),
-      MapEntry('email', email),
-      if (phone != null && phone.isNotEmpty) MapEntry('phone', phone),
-      if (city != null && city.isNotEmpty) MapEntry('city', city),
-      if (state != null && state.isNotEmpty) MapEntry('state', state),
-      if (dob != null && dob.isNotEmpty) MapEntry('dob', dob),
-      if (highestEducation != null && highestEducation.isNotEmpty) MapEntry('highestEducation', highestEducation),
-      if (empStatus != null && empStatus.isNotEmpty) MapEntry('empStatus', empStatus),
-      if (totalExp != null && totalExp.isNotEmpty) MapEntry('totalExp', totalExp),
-      if (currentCompany != null && currentCompany.isNotEmpty) MapEntry('currentCompany', currentCompany),
-      if (currentDesignation != null && currentDesignation.isNotEmpty) MapEntry('currentDesignation', currentDesignation),
-      if (expectedSalary != null && expectedSalary.isNotEmpty) MapEntry('expectedSalary', expectedSalary),
-      if (currentSalary != null && currentSalary.isNotEmpty) MapEntry('currentSalary', currentSalary),
-      if (noticePeriod != null && noticePeriod.isNotEmpty) MapEntry('noticePeriod', noticePeriod),
-      if (joiningDate != null && joiningDate.isNotEmpty) MapEntry('joiningDate', joiningDate),
-      if (additionalInfo != null && additionalInfo.isNotEmpty) MapEntry('additionalInfo', additionalInfo),
+      MapEntry('firstName', firstName.trim()),
+      MapEntry('lastName', lastName.trim()),
+      MapEntry('email', email.trim()),
+      if (phone != null && phone.trim().isNotEmpty) MapEntry('phone', phone.trim()),
+      if (city != null && city.trim().isNotEmpty) MapEntry('city', city.trim()),
+      if (state != null && state.trim().isNotEmpty) MapEntry('state', state.trim()),
+      if (dob != null && dob.trim().isNotEmpty) MapEntry('dob', dob.trim()),
+      if (highestEducation != null && highestEducation.trim().isNotEmpty) MapEntry('highestEducation', highestEducation.trim()),
+      if (empStatus != null && empStatus.trim().isNotEmpty) MapEntry('empStatus', empStatus.trim()),
+      if (totalExp != null && totalExp.trim().isNotEmpty) MapEntry('totalExp', totalExp.trim()),
+      if (currentCompany != null && currentCompany.trim().isNotEmpty) MapEntry('currentCompany', currentCompany.trim()),
+      if (currentDesignation != null && currentDesignation.trim().isNotEmpty) MapEntry('currentDesignation', currentDesignation.trim()),
+      if (expectedSalary != null && expectedSalary.trim().isNotEmpty) MapEntry('expectedSalary', expectedSalary.trim()),
+      if (currentSalary != null && currentSalary.trim().isNotEmpty) MapEntry('currentSalary', currentSalary.trim()),
+      if (noticePeriod != null && noticePeriod.trim().isNotEmpty) MapEntry('noticePeriod', noticePeriod.trim()),
+      if (joiningDate != null && joiningDate.trim().isNotEmpty) MapEntry('joiningDate', joiningDate.trim()),
+      if (additionalInfo != null && additionalInfo.trim().isNotEmpty) MapEntry('additionalInfo', additionalInfo.trim()),
     ]);
 
     // Resume file attachment
-    if (resumeFile.bytes != null) {
-      formData.files.add(MapEntry(
-        'resume',
-        MultipartFile.fromBytes(resumeFile.bytes!, filename: resumeFile.name),
-      ));
-    }
+    formData.files.add(MapEntry(
+      'resume',
+      MultipartFile.fromBytes(
+        resumeFile.bytes!,
+        filename: resumeFile.name,
+      ),
+    ));
 
     final response = await _dio.post('/applications', data: formData);
     if ((response.statusCode == 200 || response.statusCode == 201) &&
@@ -125,22 +131,41 @@ class CandidateApiClient {
       return Map<String, dynamic>.from(response.data['data']);
     }
 
-    throw Exception(response.data?['message'] ?? 'Unable to submit application. Please try again.');
+    final errMsg = response.data?['message']?.toString();
+    throw Exception(errMsg != null && errMsg.isNotEmpty ? errMsg : 'Unable to submit application. Please try again.');
   }
 }
 
 String getFriendlyErrorMessage(dynamic e) {
   if (e is DioException) {
-    if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.connectionError) {
-      return 'Network unavailable. Unable to reach the server.';
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return 'Network timeout. Please check your connection and try again.';
     }
+
+    dynamic responseData = e.response?.data;
+    if (responseData is String && responseData.isNotEmpty) {
+      try {
+        responseData = jsonDecode(responseData);
+      } catch (_) {}
+    }
+
+    if (responseData is Map && responseData['message'] != null && responseData['message'].toString().isNotEmpty) {
+      return responseData['message'].toString();
+    }
+
     final statusCode = e.response?.statusCode;
-    if (statusCode == 401) return 'Login failed or session expired.';
-    if (statusCode == 400) return e.response?.data?['message'] ?? 'Validation error. Please check your inputs.';
+    if (statusCode == 400) return 'Validation error. Please check your inputs and resume file.';
+    if (statusCode == 401) return 'Session expired or unauthorized.';
     if (statusCode == 404) return 'Position not found or application window closed.';
+    if (statusCode == 413) return 'Resume file size exceeds the 2 MB limit.';
     if (statusCode == 500) return 'Server error. Our team has been notified.';
-    return e.response?.data?['message'] ?? 'Unable to submit application. Please try again.';
+
+    return e.message ?? 'Unable to submit application. Please try again.';
   }
+
   if (e is Exception) {
     final msg = e.toString();
     if (msg.startsWith('Exception: ')) {
@@ -148,5 +173,6 @@ String getFriendlyErrorMessage(dynamic e) {
     }
     return msg;
   }
+
   return 'Unable to submit application. Please try again.';
 }

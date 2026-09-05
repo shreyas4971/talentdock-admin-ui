@@ -1,31 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:dio/dio.dart';
-import '../mock_data.dart';
 import '../api_client.dart';
 
-class ApplicationFormScreen extends StatefulWidget {
+class ApplicationFormScreen extends ConsumerStatefulWidget {
   final String positionId;
   final int initialStep;
   const ApplicationFormScreen({super.key, required this.positionId, this.initialStep = 0});
 
   @override
-  State<ApplicationFormScreen> createState() => _ApplicationFormScreenState();
+  ConsumerState<ApplicationFormScreen> createState() => _ApplicationFormScreenState();
 }
 
-class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
+class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   late int _currentStep;
-  final _apiClient = CandidateApiClient(Dio(BaseOptions(
-    baseUrl: apiBaseUrl,
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 10),
-  )));
   
+  String? _jobTitle;
+
   @override
   void initState() {
     super.initState();
     _currentStep = widget.initialStep;
+    _loadPositionTitle();
+  }
+
+  Future<void> _loadPositionTitle() async {
+    try {
+      final pos = await ref.read(candidateApiClientProvider).getPositionById(widget.positionId);
+      if (mounted && pos != null && pos['title'] != null) {
+        setState(() {
+          _jobTitle = pos['title'].toString();
+        });
+      }
+    } catch (_) {}
   }
   
   @override
@@ -85,7 +93,8 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
     setState(() => _isSubmitting = true);
     
     try {
-      final result = await _apiClient.submitApplication(
+      final client = ref.read(candidateApiClientProvider);
+      final result = await client.submitApplication(
         positionId: widget.positionId,
         firstName: _firstNameCtrl.text,
         lastName: _lastNameCtrl.text,
@@ -160,8 +169,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pos = mockPositions.firstWhere((p) => p['id'] == widget.positionId, orElse: () => {});
-    final jobTitle = pos['title'] ?? 'Position';
+    final displayTitle = _jobTitle != null && _jobTitle!.isNotEmpty ? 'Apply for $_jobTitle' : 'Apply for Position';
 
     return Scaffold(
       appBar: AppBar(title: const Text('TalentDock Careers', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -196,7 +204,7 @@ class _ApplicationFormScreenState extends State<ApplicationFormScreen> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Apply for $jobTitle', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                      Text(displayTitle, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 24),
                       Expanded(
                         child: Theme(
