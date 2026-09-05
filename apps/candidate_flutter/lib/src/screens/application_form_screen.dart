@@ -133,20 +133,66 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(getFriendlyErrorMessage(e)),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        final errorMsg = getFriendlyErrorMessage(e);
+        if (errorMsg.toLowerCase().contains('already applied')) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Already Applied', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: const Text('You have already applied for this position.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
     }
   }
 
-  void _onStepContinue() {
+  void _onStepContinue() async {
+    if (_currentStep == 0) {
+      if (!_step1FormKey.currentState!.validate()) return;
+      final email = _emailCtrl.text.trim();
+      if (email.isNotEmpty) {
+        final client = ref.read(candidateApiClientProvider);
+        final isAlreadyApplied = await client.checkAlreadyApplied(
+          positionId: widget.positionId,
+          email: email,
+        );
+        if (isAlreadyApplied && mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Already Applied', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: const Text('You have already applied for this position.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      }
+      if (mounted) setState(() => _currentStep += 1);
+      return;
+    }
+
     bool isStepValid = false;
-    if (_currentStep == 0) isStepValid = _step1FormKey.currentState!.validate();
-    else if (_currentStep == 1) isStepValid = _step2FormKey.currentState!.validate();
+    if (_currentStep == 1) isStepValid = _step2FormKey.currentState!.validate();
     else if (_currentStep == 2) isStepValid = _step3FormKey.currentState!.validate();
     else if (_currentStep == 3) isStepValid = true;
 

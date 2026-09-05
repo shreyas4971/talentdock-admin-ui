@@ -59,6 +59,31 @@ class CandidateApiClient {
     return null;
   }
 
+  /// Checks whether an application already exists for this position and candidate email.
+  Future<bool> checkAlreadyApplied({
+    required String positionId,
+    required String email,
+  }) async {
+    if (isMockMode) return false;
+    try {
+      final response = await _dio.get('/applications/check', queryParameters: {
+        'positionId': positionId,
+        'email': email.trim().toLowerCase(),
+      });
+      if (response.statusCode == 409 || response.data?['alreadyApplied'] == true) {
+        return true;
+      }
+      return false;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Submit candidate application with resume upload.
   /// STRICT: MUST NOT fall back to a fake success ID when backend is unavailable.
   Future<Map<String, dynamic>> submitApplication({
@@ -166,6 +191,7 @@ String getFriendlyErrorMessage(dynamic e) {
     if (statusCode == 400) return 'Validation error. Please check your inputs and resume file.';
     if (statusCode == 401) return 'Session expired or unauthorized.';
     if (statusCode == 404) return 'Position not found or application window closed.';
+    if (statusCode == 409) return 'You have already applied for this position.';
     if (statusCode == 413) return 'Resume file size exceeds the 2 MB limit.';
     if (statusCode == 500) return 'Server error. Our team has been notified.';
 

@@ -1,11 +1,48 @@
 import { Hono } from 'hono';
-import { eq, count } from 'drizzle-orm';
+import { eq, count, and } from 'drizzle-orm';
 import { Env } from '../types';
 import { getDb } from '../db/client';
 import { candidates, applications, candidateDocuments, candidateTimeline, positions } from '../db/schema';
 import { R2StorageService } from '../storage/r2';
 
 const applicationsRoute = new Hono<{ Bindings: Env }>();
+
+/**
+ * Check if candidate has already applied to a position
+ */
+applicationsRoute.get('/check', async (c) => {
+  try {
+    const positionId = c.req.query('positionId');
+    const email = c.req.query('email')?.toLowerCase().trim();
+
+    if (!positionId || !email) {
+      return c.json({ success: true, alreadyApplied: false });
+    }
+
+    const db = getDb(c.env.DB);
+    const candidate = await db.select().from(candidates).where(eq(candidates.email, email)).get();
+    if (!candidate) {
+      return c.json({ success: true, alreadyApplied: false });
+    }
+
+    const existingApp = await db.select()
+      .from(applications)
+      .where(and(eq(applications.candidateId, candidate.id), eq(applications.positionId, positionId)))
+      .get();
+
+    if (existingApp) {
+      return c.json({
+        success: false,
+        alreadyApplied: true,
+        message: 'You have already applied for this position.',
+      }, 409);
+    }
+
+    return c.json({ success: true, alreadyApplied: false });
+  } catch (error: any) {
+    return c.json({ success: true, alreadyApplied: false });
+  }
+});
 
 /**
  * Helper to generate reference ID: REC-YYYY-000001
@@ -107,6 +144,22 @@ applicationsRoute.post('/', async (c) => {
 
     // 1. Find or create candidate
     let candidate = await db.select().from(candidates).where(eq(candidates.email, email)).get();
+
+    if (candidate) {
+      // Enforce duplicate application rule: same email + same position -> 409 Conflict
+      const existingApp = await db.select()
+        .from(applications)
+        .where(and(eq(applications.candidateId, candidate.id), eq(applications.positionId, positionId)))
+        .get();
+
+      if (existingApp) {
+        return c.json({
+          success: false,
+          message: 'You have already applied for this position.',
+        }, 409);
+      }
+    }
+
     const candidateId = candidate ? candidate.id : `can-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
     const candidateData = {
