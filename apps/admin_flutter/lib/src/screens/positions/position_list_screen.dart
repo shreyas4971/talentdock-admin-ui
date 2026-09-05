@@ -95,6 +95,22 @@ class _PositionListScreenState extends ConsumerState<PositionListScreen> {
           );
         }
       }
+    } else if (action == 'delete') {
+      try {
+        await client.deletePosition(posId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Position removed successfully')),
+          );
+        }
+        await _loadPositions();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to remove: ${getFriendlyErrorMessage(e)}')),
+          );
+        }
+      }
     }
   }
 
@@ -246,6 +262,7 @@ class _PositionListScreenState extends ConsumerState<PositionListScreen> {
                           const PopupMenuItem(value: 'edit', child: Text('Edit')),
                           const PopupMenuItem(value: 'dup', child: Text('Duplicate')),
                           const PopupMenuItem(value: 'archive', child: Text('Archive')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
                         ],
                       )
                     ],

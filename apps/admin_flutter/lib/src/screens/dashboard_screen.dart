@@ -66,22 +66,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  Future<void> _archivePosition(Map<String, dynamic> position) async {
+  Future<void> _removePosition(Map<String, dynamic> position) async {
     final client = ref.read(adminApiClientProvider);
     final posId = position['id']?.toString() ?? '';
 
     try {
-      await client.updatePosition(posId, {'status': 'ARCHIVED'});
+      await client.deletePosition(posId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Position archived successfully')),
+          const SnackBar(content: Text('Position removed successfully')),
         );
       }
       await _loadDashboardData();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to archive position: ${getFriendlyErrorMessage(e)}')),
+          SnackBar(content: Text('Failed to remove position: ${getFriendlyErrorMessage(e)}')),
         );
       }
     }
@@ -180,7 +180,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildPositionApplicationSummary(BuildContext context) {
-    List<Map<String, dynamic>> positions = _positions.toList();
+    // Only display active open/published positions on the dashboard
+    List<Map<String, dynamic>> positions = _positions.where((p) {
+      final s = (p['status'] ?? '').toString().toUpperCase();
+      return s == 'PUBLISHED' || s == 'OPEN';
+    }).toList();
 
     List<Map<String, dynamic>> pinnedPositions = positions.where((p) => p['isPinned'] == true || p['pinned'] == true).toList();
     List<Map<String, dynamic>> unpinnedPositions = positions.where((p) => p['isPinned'] != true && p['pinned'] != true).toList();
@@ -285,7 +289,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               label: const Text('Applicants'),
                             ),
                             TextButton.icon(
-                              onPressed: () => _archivePosition(position),
+                              onPressed: () => _removePosition(position),
                               icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                               label: const Text('Remove', style: TextStyle(color: Colors.red)),
                             ),

@@ -127,6 +127,16 @@ class AdminApiClient {
     throw Exception(response.data?['message'] ?? 'Failed to update position');
   }
 
+  /// Delete / Remove Position
+  Future<void> deletePosition(String id) async {
+    if (isMockMode) return;
+    final response = await _dio.delete('/positions/$id');
+    if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
+      return;
+    }
+    throw Exception(response.data?['message'] ?? 'Failed to delete position');
+  }
+
   /// List Candidates (with search/filter)
   Future<List<Map<String, dynamic>>> getCandidates({String? search, String? status, String? positionId}) async {
     if (isMockMode) return mockCandidates;

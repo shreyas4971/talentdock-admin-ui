@@ -210,4 +210,29 @@ positionsRoute.put('/:id', authMiddleware as any, async (c) => {
   }
 });
 
+// 6. Admin: Delete / Remove Position
+positionsRoute.delete('/:id', authMiddleware as any, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = getDb(c.env.DB);
+    const existing = await db.select().from(positions).where(eq(positions.id, id)).get();
+    if (!existing) {
+      return c.json({ success: false, message: 'Position not found' }, 404);
+    }
+
+    const apps = await db.select().from(applications).where(eq(applications.positionId, id)).all();
+    if (apps.length > 0) {
+      // Archive position if applications exist to preserve history
+      await db.update(positions).set({ status: 'ARCHIVED', updatedAt: new Date().toISOString() }).where(eq(positions.id, id)).run();
+    } else {
+      // Hard delete if no applications exist
+      await db.delete(positions).where(eq(positions.id, id)).run();
+    }
+
+    return c.json({ success: true, message: 'Position removed successfully' });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message || 'Failed to remove position' }, 500);
+  }
+});
+
 export default positionsRoute;
