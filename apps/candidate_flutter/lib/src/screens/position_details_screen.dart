@@ -131,12 +131,6 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
                   _buildIconChip(Icons.location_on, location),
                   _buildIconChip(Icons.work_outline, employmentType),
                   _buildIconChip(Icons.access_time, experience),
-                  if (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty)
-                    _buildIconChip(Icons.stars_outlined, '$relevantExp Yrs Relevant Exp'),
-                  if (noticePeriod != null && noticePeriod.isNotEmpty)
-                    _buildIconChip(Icons.calendar_month_outlined, 'Notice: $noticePeriod'),
-                  if (immediateJoiner)
-                    _buildIconChip(Icons.bolt, 'Immediate Joiner Required', color: Colors.orange.shade800),
                 ],
               ),
               if (description.isNotEmpty) ...[
