@@ -183,26 +183,59 @@ class _PositionListingScreenState extends ConsumerState<PositionListingScreen> {
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
-                                              const SizedBox(width: 4),
-                                              Text(location, style: const TextStyle(color: Colors.grey)),
-                                              const SizedBox(width: 16),
-                                              const Icon(Icons.work_outline, size: 16, color: Colors.grey),
-                                              const SizedBox(width: 4),
-                                              Text(employmentType, style: const TextStyle(color: Colors.grey)),
-                                              const SizedBox(width: 16),
-                                              const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                              const SizedBox(width: 4),
-                                              Text(experience, style: const TextStyle(color: Colors.grey)),
-                                            ],
-                                          ),
-                                          if (shortDescription.isNotEmpty) ...[
-                                            const SizedBox(height: 16),
-                                            Text(shortDescription, style: const TextStyle(fontSize: 15, color: Colors.black87)),
-                                          ],
+                                           Wrap(
+                                             spacing: 16,
+                                             runSpacing: 8,
+                                             crossAxisAlignment: WrapCrossAlignment.center,
+                                             children: [
+                                               Row(
+                                                 mainAxisSize: MainAxisSize.min,
+                                                 children: [
+                                                   const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                                                   const SizedBox(width: 4),
+                                                   Text(location, style: const TextStyle(color: Colors.grey)),
+                                                 ],
+                                               ),
+                                               Row(
+                                                 mainAxisSize: MainAxisSize.min,
+                                                 children: [
+                                                   const Icon(Icons.work_outline, size: 16, color: Colors.grey),
+                                                   const SizedBox(width: 4),
+                                                   Text(employmentType, style: const TextStyle(color: Colors.grey)),
+                                                 ],
+                                               ),
+                                               Row(
+                                                 mainAxisSize: MainAxisSize.min,
+                                                 children: [
+                                                   const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                                   const SizedBox(width: 4),
+                                                   Text(experience, style: const TextStyle(color: Colors.grey)),
+                                                 ],
+                                               ),
+                                               if (pos['immediateJoiner'] == true || pos['immediateJoinerRequired'] == true)
+                                                 Container(
+                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                   decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.orange.shade200)),
+                                                   child: Text('Immediate Joiner', style: TextStyle(color: Colors.orange.shade900, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                 ),
+                                             ],
+                                           ),
+                                           if (pos['skills'] is List && (pos['skills'] as List).isNotEmpty) ...[
+                                             const SizedBox(height: 12),
+                                             Wrap(
+                                               spacing: 6,
+                                               runSpacing: 6,
+                                               children: (pos['skills'] as List).map((s) => Container(
+                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                 decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.teal.shade200)),
+                                                 child: Text(s.toString(), style: TextStyle(color: Colors.teal.shade900, fontSize: 12, fontWeight: FontWeight.w600)),
+                                               )).toList(),
+                                             ),
+                                           ],
+                                           if (shortDescription.isNotEmpty) ...[
+                                             const SizedBox(height: 16),
+                                             Text(shortDescription, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+                                           ],
                                           const SizedBox(height: 24),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.end,

@@ -88,6 +88,11 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
     final location = pos['location']?.toString() ?? 'Remote';
     final employmentType = pos['employmentType']?.toString() ?? pos['type']?.toString() ?? 'Full-time';
     final experience = pos['experience']?.toString() ?? '1+ Years';
+    final minExp = pos['minExperience'] ?? pos['minExp'];
+    final maxExp = pos['maxExperience'] ?? pos['maxExp'];
+    final relevantExp = pos['relevantExperience'];
+    final noticePeriod = pos['noticePeriod']?.toString() ?? pos['maxNoticePeriod']?.toString();
+    final immediateJoiner = pos['immediateJoiner'] == true || pos['immediateJoinerRequired'] == true;
     final description = pos['description']?.toString() ?? '';
 
     List<String> parseList(dynamic raw) {
@@ -98,6 +103,13 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
     final responsibilities = parseList(pos['responsibilities']);
     final requirements = parseList(pos['requirements']);
     final benefits = parseList(pos['benefits']);
+    final skills = parseList(pos['skills'] ?? pos['specifications'] ?? pos['specs']);
+
+    final hasCandidateReqs = (minExp != null && minExp.toString() != '0') ||
+        (maxExp != null && maxExp.toString() != '0') ||
+        (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty) ||
+        (noticePeriod != null && noticePeriod.isNotEmpty) ||
+        immediateJoiner;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,15 +129,61 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
                 children: [
                   _buildIconChip(Icons.domain, department),
                   _buildIconChip(Icons.location_on, location),
-                  _buildIconChip(Icons.work, employmentType),
+                  _buildIconChip(Icons.work_outline, employmentType),
                   _buildIconChip(Icons.access_time, experience),
+                  if (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty)
+                    _buildIconChip(Icons.stars_outlined, '$relevantExp Yrs Relevant Exp'),
+                  if (noticePeriod != null && noticePeriod.isNotEmpty)
+                    _buildIconChip(Icons.calendar_month_outlined, 'Notice: $noticePeriod'),
+                  if (immediateJoiner)
+                    _buildIconChip(Icons.bolt, 'Immediate Joiner Required', color: Colors.orange.shade800),
                 ],
               ),
               if (description.isNotEmpty) ...[
-                const SizedBox(height: 48),
+                const SizedBox(height: 40),
                 const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
                 const SizedBox(height: 16),
                 Text(description, style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87)),
+              ],
+              if (skills.isNotEmpty) ...[
+                const SizedBox(height: 36),
+                const Text('Required Skills & Specifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: skills.map((skill) => Chip(
+                    label: Text(skill, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    backgroundColor: Colors.teal.shade50,
+                    side: BorderSide(color: Colors.teal.shade200),
+                    avatar: const Icon(Icons.check_circle_outline, size: 18, color: Colors.teal),
+                  )).toList(),
+                ),
+              ],
+              if (hasCandidateReqs) ...[
+                const SizedBox(height: 36),
+                const Text('Candidate Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      if (minExp != null || maxExp != null)
+                        _buildRequirementRow('Overall Experience', '${minExp ?? 0} to ${maxExp ?? 5} Years'),
+                      if (relevantExp != null && relevantExp.toString() != '0' && relevantExp.toString().isNotEmpty)
+                        _buildRequirementRow('Relevant Experience Required', '$relevantExp Years'),
+                      if (noticePeriod != null && noticePeriod.isNotEmpty)
+                        _buildRequirementRow('Maximum Notice Period', noticePeriod),
+                      if (immediateJoiner)
+                        _buildRequirementRow('Immediate Joiner', 'Required (Immediate availability preferred)'),
+                    ],
+                  ),
+                ),
               ],
               if (responsibilities.isNotEmpty) ...[
                 const SizedBox(height: 32),
@@ -167,13 +225,32 @@ class _PositionDetailsScreenState extends ConsumerState<PositionDetailsScreen> {
     );
   }
 
-  Widget _buildIconChip(IconData icon, String label) {
+  Widget _buildRequirementRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 220,
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87, fontSize: 15)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.black87, fontSize: 15)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconChip(IconData icon, String label, {Color? color}) {
+    final effectiveColor = color ?? Colors.teal;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20, color: Colors.teal),
+        Icon(icon, size: 20, color: effectiveColor),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 16, color: Colors.black87)),
+        Text(label, style: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: color != null ? FontWeight.bold : FontWeight.normal)),
       ],
     );
   }
