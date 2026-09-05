@@ -1,6 +1,7 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'src/api_client.dart';
 import 'src/layout/admin_layout.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/dashboard_screen.dart';
@@ -10,63 +11,81 @@ import 'src/screens/candidate_list_screen.dart';
 import 'src/screens/candidate_details_screen.dart';
 
 void main() {
-  runApp(const AdminApp());
+  runApp(const ProviderScope(child: AdminApp()));
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-final router = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
-    ShellRoute(
-      navigatorKey: _shellNavigatorKey,
-      builder: (context, state, child) => AdminLayout(child: child),
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const DashboardScreen(),
-        ),
-        GoRoute(
-          path: '/positions',
-          builder: (context, state) => const PositionListScreen(),
-          routes: [
-            GoRoute(
-              path: 'new',
-              builder: (context, state) => const PositionEditorScreen(),
-            ),
-            GoRoute(
-              path: ':id',
-              builder: (context, state) => PositionEditorScreen(id: state.pathParameters['id']),
-            ),
-          ]
-        ),
-        GoRoute(
-          path: '/candidates',
-          builder: (context, state) => const CandidateListScreen(),
-          routes: [
-            GoRoute(
-              path: ':id',
-              builder: (context, state) => CandidateDetailsScreen(id: state.pathParameters['id']!),
-            ),
-          ]
-        ),
+final routerProvider = Provider<GoRouter>((ref) {
+  final token = ref.watch(authTokenProvider);
+  final isMock = apiBaseUrl.isEmpty;
 
-      ]
-    )
-  ],
-);
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/',
+    redirect: (context, state) {
+      final isLoggingIn = state.uri.path == '/login';
+      // In production mode, if not authenticated, force /login
+      if (!isMock && token == null) {
+        return isLoggingIn ? null : '/login';
+      }
+      // If already logged in and at /login, redirect to /
+      if (token != null && isLoggingIn) {
+        return '/';
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) => AdminLayout(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/positions',
+            builder: (context, state) => const PositionListScreen(),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const PositionEditorScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => PositionEditorScreen(id: state.pathParameters['id']),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/candidates',
+            builder: (context, state) => const CandidateListScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => CandidateDetailsScreen(id: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+});
 
-class AdminApp extends StatelessWidget {
+class AdminApp extends ConsumerWidget {
   const AdminApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
       title: 'TalentDock Admin',
       debugShowCheckedModeBanner: false,
@@ -93,18 +112,18 @@ class AdminApp extends StatelessWidget {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          )
+          ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          )
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        )
+        ),
       ),
       routerConfig: router,
     );

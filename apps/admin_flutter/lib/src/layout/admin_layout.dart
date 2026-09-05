@@ -1,15 +1,21 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../api_client.dart';
 
-class AdminLayout extends StatelessWidget {
+class AdminLayout extends ConsumerWidget {
   final Widget child;
   const AdminLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final path = GoRouterState.of(context).uri.path;
     final isDesktop = MediaQuery.of(context).size.width >= 800;
+    final authUser = ref.watch(authUserProvider);
+    final userEmail = authUser?['email'] as String? ?? 'admin@talentdock.com';
+    final userName = authUser?['name'] as String? ?? 'Admin User';
+    final userInitial = (userName.isNotEmpty ? userName[0] : (userEmail.isNotEmpty ? userEmail[0] : 'A')).toUpperCase();
 
     final sidebar = Container(
       width: 280,
@@ -48,22 +54,24 @@ class AdminLayout extends StatelessWidget {
               tooltip: 'Account Details',
               onSelected: (value) {
                 if (value == 'logout') {
-                  context.go('/login'); // Assuming /login route exists based on directory listing
+                  ref.read(authTokenProvider.notifier).setToken(null);
+                  ref.read(authUserProvider.notifier).setUser(null);
+                  context.go('/login');
                 } else if (value == 'settings') {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings opened')));
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   enabled: false,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Admin User', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                        SizedBox(height: 4),
-                        Text('admin@talentdock.com', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                        Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                        const SizedBox(height: 4),
+                        Text(userEmail, style: const TextStyle(color: Colors.black54, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -90,9 +98,9 @@ class AdminLayout extends StatelessWidget {
                   ),
                 ),
               ],
-              child: const CircleAvatar(
+              child: CircleAvatar(
                 backgroundColor: Colors.blueAccent,
-                child: Text('A', style: TextStyle(color: Colors.white)),
+                child: Text(userInitial, style: const TextStyle(color: Colors.white)),
               ),
             ),
           )

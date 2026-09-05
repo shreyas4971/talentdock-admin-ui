@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'src/api_client.dart';
 import 'src/screens/landing_screen.dart';
 import 'src/screens/position_listing_screen.dart';
 import 'src/screens/position_details_screen.dart';
@@ -9,6 +10,7 @@ import 'src/screens/success_screen.dart';
 import 'src/theme/app_theme.dart';
 
 void main() {
+  debugPrint('TalentDock Candidate API: $apiBaseUrl');
   runApp(const ProviderScope(child: CandidateApp()));
 }
 

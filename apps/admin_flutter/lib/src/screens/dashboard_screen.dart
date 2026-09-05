@@ -1,17 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../mock_data.dart';
+import '../api_client.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Map<String, dynamic>> _positions = [];
+  List<Map<String, dynamic>> _candidates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final client = ref.read(adminApiClientProvider);
+      final positions = await client.getPositions();
+      final candidates = await client.getCandidates();
+      if (mounted) {
+        setState(() {
+          _positions = positions;
+          _candidates = candidates;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = getFriendlyErrorMessage(e);
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _togglePin(Map<String, dynamic> position) async {
+    final client = ref.read(adminApiClientProvider);
+    final posId = position['id']?.toString() ?? '';
+    final isPinned = position['isPinned'] == true || position['pinned'] == true;
+
+    try {
+      await client.updatePosition(posId, {'isPinned': !isPinned});
+      await _loadDashboardData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update position: ${getFriendlyErrorMessage(e)}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _archivePosition(Map<String, dynamic> position) async {
+    final client = ref.read(adminApiClientProvider);
+    final posId = position['id']?.toString() ?? '';
+
+    try {
+      await client.updatePosition(posId, {'status': 'ARCHIVED'});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Position archived successfully')),
+        );
+      }
+      await _loadDashboardData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to archive position: ${getFriendlyErrorMessage(e)}')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
-    
-    int openPositions = mockPositions.where((p) => p['status'] == 'Published').length;
-    int newApplications = mockCandidates.where((c) => c['isOpened'] == false).length;
-    int pendingReview = mockCandidates.where((c) => c['isOpened'] == true && c['hasDecision'] == false).length;
+
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(64.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 16)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadDashboardData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final openPositions = _positions.where((p) {
+      final s = (p['status'] ?? '').toString().toUpperCase();
+      return s == 'PUBLISHED';
+    }).length;
+
+    final newApplications = _candidates.where((c) {
+      return c['isOpened'] == false || c['opened'] == false;
+    }).length;
+
+    final pendingReview = _candidates.where((c) {
+      final isOpened = c['isOpened'] == true || c['opened'] == true;
+      final hasDecision = c['hasDecision'] == true;
+      return isOpened && !hasDecision;
+    }).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -22,9 +143,18 @@ class DashboardScreen extends StatelessWidget {
           spacing: 24,
           runSpacing: 24,
           children: [
-            SizedBox(width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity, child: _StatCard('Open Positions', '$openPositions', Icons.work)),
-            SizedBox(width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity, child: _StatCard('New Applications', '$newApplications', Icons.today)),
-            SizedBox(width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity, child: _StatCard('Pending Review', '$pendingReview', Icons.pending_actions)),
+            SizedBox(
+              width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity,
+              child: _StatCard('Open Positions', '$openPositions', Icons.work),
+            ),
+            SizedBox(
+              width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity,
+              child: _StatCard('New Applications', '$newApplications', Icons.today),
+            ),
+            SizedBox(
+              width: isDesktop ? (MediaQuery.of(context).size.width > 1200 ? 250 : 200) : double.infinity,
+              child: _StatCard('Pending Review', '$pendingReview', Icons.pending_actions),
+            ),
           ],
         ),
         const SizedBox(height: 32),
@@ -50,21 +180,20 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildPositionApplicationSummary(BuildContext context) {
-    List<Map<String, dynamic>> positions = mockPositions.toList();
-    
-    List<Map<String, dynamic>> pinnedPositions = positions.where((p) => p['pinned'] == true).toList();
-    List<Map<String, dynamic>> unpinnedPositions = positions.where((p) => p['pinned'] != true).toList();
-    
-    // Sort pinned and unpinned by date descending just to be safe
+    List<Map<String, dynamic>> positions = _positions.toList();
+
+    List<Map<String, dynamic>> pinnedPositions = positions.where((p) => p['isPinned'] == true || p['pinned'] == true).toList();
+    List<Map<String, dynamic>> unpinnedPositions = positions.where((p) => p['isPinned'] != true && p['pinned'] != true).toList();
+
     pinnedPositions.sort((a, b) {
-      DateTime aDate = DateTime.parse(a['postedDate'] as String);
-      DateTime bDate = DateTime.parse(b['postedDate'] as String);
+      final aDate = DateTime.tryParse(a['postedDate']?.toString() ?? a['createdAt']?.toString() ?? '') ?? DateTime.now();
+      final bDate = DateTime.tryParse(b['postedDate']?.toString() ?? b['createdAt']?.toString() ?? '') ?? DateTime.now();
       return bDate.compareTo(aDate);
     });
-    
+
     unpinnedPositions.sort((a, b) {
-      DateTime aDate = DateTime.parse(a['postedDate'] as String);
-      DateTime bDate = DateTime.parse(b['postedDate'] as String);
+      final aDate = DateTime.tryParse(a['postedDate']?.toString() ?? a['createdAt']?.toString() ?? '') ?? DateTime.now();
+      final bDate = DateTime.tryParse(b['postedDate']?.toString() ?? b['createdAt']?.toString() ?? '') ?? DateTime.now();
       return bDate.compareTo(aDate);
     });
 
@@ -72,7 +201,7 @@ class DashboardScreen extends StatelessWidget {
       unpinnedPositions.insertAll(0, pinnedPositions.sublist(3));
       pinnedPositions = pinnedPositions.sublist(0, 3);
     }
-    
+
     List<Map<String, dynamic>> finalPositions = [...pinnedPositions, ...unpinnedPositions];
 
     return Card(
@@ -83,78 +212,90 @@ class DashboardScreen extends StatelessWidget {
           children: [
             const Text('Positions / Applications', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            ...finalPositions.asMap().entries.map((entry) {
-              int index = entry.key;
-              var position = entry.value;
-              return Card(
-                elevation: 0,
-                color: Colors.transparent,
-                margin: const EdgeInsets.only(bottom: 8.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Colors.grey.shade200),
+            if (finalPositions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Text('No positions found.', style: TextStyle(color: Colors.grey.shade600)),
                 ),
-                child: ExpansionTile(
-                  shape: const Border(),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
-                    child: Text('${index + 1}', style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+              )
+            else
+              ...finalPositions.asMap().entries.map((entry) {
+                int index = entry.key;
+                var position = entry.value;
+                final isPinned = position['isPinned'] == true || position['pinned'] == true;
+                final appCount = position['applications'] ?? position['applicationCount'] ?? 0;
+                final dateStr = position['postedDate']?.toString() ?? position['createdAt']?.toString() ?? DateTime.now().toIso8601String();
+
+                return Card(
+                  elevation: 0,
+                  color: Colors.transparent,
+                  margin: const EdgeInsets.only(bottom: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: Colors.grey.shade200),
                   ),
-                  title: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          position['title'] as String,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (position['pinned'] == true) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.push_pin, size: 16, color: Colors.blueAccent),
-                      ],
-                    ],
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Row(
+                  child: ExpansionTile(
+                    shape: const Border(),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
+                      child: Text('${index + 1}', style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                    ),
+                    title: Row(
                       children: [
-                        Text('${position['applications']} applicants', style: TextStyle(color: Colors.grey.shade600)),
-                        const SizedBox(width: 12),
-                        const Text('•', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        const SizedBox(width: 12),
-                        Text(_formatTimeLive(position['postedDate'] as String), style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                        Flexible(
+                          child: Text(
+                            position['title']?.toString() ?? 'Untitled Position',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isPinned) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.push_pin, size: 16, color: Colors.blueAccent),
+                        ],
                       ],
                     ),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          TextButton.icon(
-                            onPressed: () {},
-                            icon: Icon(position['pinned'] == true ? Icons.push_pin : Icons.push_pin_outlined, size: 18),
-                            label: Text(position['pinned'] == true ? 'Unpin' : 'Pin'),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => context.go('/candidates'), // Mock routing to candidates list
-                            icon: const Icon(Icons.people_outline, size: 18),
-                            label: const Text('Applicants'),
-                          ),
-                          TextButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                            label: const Text('Remove', style: TextStyle(color: Colors.red)),
-                          ),
+                          Text('$appCount applicants', style: TextStyle(color: Colors.grey.shade600)),
+                          const SizedBox(width: 12),
+                          const Text('•', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(width: 12),
+                          Text(_formatTimeLive(dateStr), style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                         ],
                       ),
-                    )
-                  ],
-                ),
-              );
-            }),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => _togglePin(position),
+                              icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined, size: 18),
+                              label: Text(isPinned ? 'Unpin' : 'Pin'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => context.go('/candidates'),
+                              icon: const Icon(Icons.people_outline, size: 18),
+                              label: const Text('Applicants'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _archivePosition(position),
+                              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                              label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -162,7 +303,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   String _formatTimeLive(String isoDate) {
-    final date = DateTime.parse(isoDate);
+    final date = DateTime.tryParse(isoDate) ?? DateTime.now();
     final diff = DateTime.now().difference(date);
     if (diff.inDays == 0) return 'Live today';
     if (diff.inDays == 1) return 'Live 1 day';

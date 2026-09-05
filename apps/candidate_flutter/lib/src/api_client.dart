@@ -27,22 +27,18 @@ class CandidateApiClient {
 
   bool get isMockMode => _dio.options.baseUrl.isEmpty;
 
-  /// Fetch public published positions (with mock fallback for browsing)
+  /// Fetch public published positions (with mock fallback ONLY in standalone mock mode)
   Future<List<Map<String, dynamic>>> getPublicPositions() async {
     if (isMockMode) return mockPositions;
-    try {
-      final response = await _dio.get('/positions/public');
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        final List<dynamic> list = response.data['data'];
-        return list.map((item) => Map<String, dynamic>.from(item)).toList();
-      }
-    } catch (e) {
-      // Graceful fallback to mock data for development browsing
+    final response = await _dio.get('/positions/public');
+    if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
+      final List<dynamic> list = response.data['data'] ?? [];
+      return list.map((item) => Map<String, dynamic>.from(item)).toList();
     }
-    return mockPositions;
+    throw Exception(response.data?['message'] ?? 'Failed to fetch public positions');
   }
 
-  /// Fetch position details by ID (with mock fallback for browsing)
+  /// Fetch position details by ID (with mock fallback ONLY in standalone mock mode)
   Future<Map<String, dynamic>?> getPositionById(String id) async {
     if (isMockMode) {
       return mockPositions.cast<Map<String, dynamic>?>().firstWhere(
@@ -52,16 +48,14 @@ class CandidateApiClient {
     }
     try {
       final response = await _dio.get('/positions/$id');
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
         return Map<String, dynamic>.from(response.data['data']);
       }
-    } catch (e) {
-      // Graceful fallback to mock data
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
     }
-    return mockPositions.cast<Map<String, dynamic>?>().firstWhere(
-      (p) => p?['id'] == id,
-      orElse: () => null,
-    );
+    return null;
   }
 
   /// Submit candidate application with resume upload.

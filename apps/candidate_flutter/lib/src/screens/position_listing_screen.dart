@@ -1,37 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../mock_data.dart';
+import '../api_client.dart';
 
-class PositionListingScreen extends StatefulWidget {
+class PositionListingScreen extends ConsumerStatefulWidget {
   const PositionListingScreen({super.key});
 
   @override
-  State<PositionListingScreen> createState() => _PositionListingScreenState();
+  ConsumerState<PositionListingScreen> createState() => _PositionListingScreenState();
 }
 
-class _PositionListingScreenState extends State<PositionListingScreen> {
+class _PositionListingScreenState extends ConsumerState<PositionListingScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Map<String, dynamic>> _positions = [];
+
   String _searchQuery = '';
   String? _selectedDepartment;
   String? _selectedLocation;
   String? _selectedExperience;
 
-  List<String> get _departments => mockPositions.map((p) => p['department'] as String).toSet().toList()..sort();
-  List<String> get _locations => mockPositions.map((p) => p['location'] as String).toSet().toList()..sort();
-  List<String> get _experiences => mockPositions.map((p) => p['experience'] as String).toSet().toList()..sort();
+  @override
+  void initState() {
+    super.initState();
+    _loadPositions();
+  }
+
+  Future<void> _loadPositions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final client = ref.read(candidateApiClientProvider);
+      final positions = await client.getPublicPositions();
+      if (mounted) {
+        setState(() {
+          _positions = positions;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = getFriendlyErrorMessage(e);
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  List<String> get _departments => _positions
+      .map((p) => p['department']?.toString() ?? '')
+      .where((d) => d.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> get _locations => _positions
+      .map((p) => p['location']?.toString() ?? '')
+      .where((l) => l.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> get _experiences => _positions
+      .map((p) => p['experience']?.toString() ?? '')
+      .where((e) => e.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
 
   List<Map<String, dynamic>> get _filteredPositions {
-    return mockPositions.where((p) {
-      final matchesSearch = p['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesDept = _selectedDepartment == null || p['department'] == _selectedDepartment;
-      final matchesLoc = _selectedLocation == null || p['location'] == _selectedLocation;
-      final matchesExp = _selectedExperience == null || p['experience'] == _selectedExperience;
+    return _positions.where((p) {
+      final title = (p['title'] ?? '').toString().toLowerCase();
+      final dept = (p['department'] ?? '').toString();
+      final loc = (p['location'] ?? '').toString();
+      final exp = (p['experience'] ?? '').toString();
+
+      final matchesSearch = _searchQuery.isEmpty || title.contains(_searchQuery.toLowerCase());
+      final matchesDept = _selectedDepartment == null || dept == _selectedDepartment;
+      final matchesLoc = _selectedLocation == null || loc == _selectedLocation;
+      final matchesExp = _selectedExperience == null || exp == _selectedExperience;
       return matchesSearch && matchesDept && matchesLoc && matchesExp;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredPositions;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Open Positions', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -55,7 +112,7 @@ class _PositionListingScreenState extends State<PositionListingScreen> {
                         filled: true,
                         fillColor: Colors.grey.shade100,
                       ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
+                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -71,71 +128,102 @@ class _PositionListingScreenState extends State<PositionListingScreen> {
                 ),
               ),
               Expanded(
-                child: filtered.isEmpty
-                    ? const Center(child: Text('No positions found.', style: TextStyle(fontSize: 18, color: Colors.grey)))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final pos = filtered[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _errorMessage != null
+                        ? Center(
                             child: Padding(
-                              padding: const EdgeInsets.all(24.0),
+                              padding: const EdgeInsets.all(32.0),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(pos['title'], style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                                      Chip(
-                                        label: Text(pos['department']),
-                                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                        labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                                        side: BorderSide.none,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(pos['location'], style: const TextStyle(color: Colors.grey)),
-                                      const SizedBox(width: 16),
-                                      const Icon(Icons.work_outline, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(pos['employmentType'], style: const TextStyle(color: Colors.grey)),
-                                      const SizedBox(width: 16),
-                                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(pos['experience'], style: const TextStyle(color: Colors.grey)),
-                                    ],
-                                  ),
+                                  Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 16)),
                                   const SizedBox(height: 16),
-                                  Text(pos['shortDescription'], style: const TextStyle(fontSize: 15, color: Colors.black87)),
-                                  const SizedBox(height: 24),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      TextButton(
-                                        onPressed: () => context.go('/positions/${pos['id']}'),
-                                        child: const Text('View Details'),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      ElevatedButton(
-                                        onPressed: () => context.go('/positions/${pos['id']}/apply'),
-                                        child: const Text('Apply Now'),
-                                      ),
-                                    ],
-                                  )
+                                  ElevatedButton(onPressed: _loadPositions, child: const Text('Retry')),
                                 ],
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                        : _filteredPositions.isEmpty
+                            ? const Center(child: Text('No positions found.', style: TextStyle(fontSize: 18, color: Colors.grey)))
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                                itemCount: _filteredPositions.length,
+                                itemBuilder: (context, index) {
+                                  final pos = _filteredPositions[index];
+                                  final title = pos['title']?.toString() ?? 'Untitled Position';
+                                  final department = pos['department']?.toString() ?? 'General';
+                                  final location = pos['location']?.toString() ?? 'Remote';
+                                  final employmentType = pos['employmentType']?.toString() ?? pos['type']?.toString() ?? 'Full-time';
+                                  final experience = pos['experience']?.toString() ?? '1+ Years';
+                                  final shortDescription = pos['shortDescription']?.toString() ?? pos['description']?.toString() ?? '';
+                                  final posId = pos['id']?.toString() ?? '';
+
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  title,
+                                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                              Chip(
+                                                label: Text(department),
+                                                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                                labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                                                side: BorderSide.none,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(location, style: const TextStyle(color: Colors.grey)),
+                                              const SizedBox(width: 16),
+                                              const Icon(Icons.work_outline, size: 16, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(employmentType, style: const TextStyle(color: Colors.grey)),
+                                              const SizedBox(width: 16),
+                                              const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(experience, style: const TextStyle(color: Colors.grey)),
+                                            ],
+                                          ),
+                                          if (shortDescription.isNotEmpty) ...[
+                                            const SizedBox(height: 16),
+                                            Text(shortDescription, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+                                          ],
+                                          const SizedBox(height: 24),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () => context.go('/positions/$posId'),
+                                                child: const Text('View Details'),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              ElevatedButton(
+                                                onPressed: () => context.go('/positions/$posId/apply'),
+                                                child: const Text('Apply Now'),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
               ),
             ],
           ),
