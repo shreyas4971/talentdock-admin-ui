@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'mock_data.dart';
 
 // Configurable API base URL (empty string indicates standalone Mock Mode)
@@ -9,18 +11,83 @@ const String apiBaseUrl = String.fromEnvironment(
   defaultValue: '',
 );
 
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError('sharedPreferencesProvider must be overridden in main');
+});
+
 class AuthTokenNotifier extends Notifier<String?> {
   @override
-  String? build() => null;
-  void setToken(String? token) => state = token;
+  String? build() {
+    try {
+      final prefs = ref.watch(sharedPreferencesProvider);
+      final storedToken = prefs.getString('auth_token');
+      if (storedToken != null && storedToken.isNotEmpty && _isTokenValid(storedToken)) {
+        return storedToken;
+      }
+      if (storedToken != null) {
+        prefs.remove('auth_token');
+        prefs.remove('auth_user');
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void setToken(String? token) {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (token != null && token.isNotEmpty) {
+        prefs.setString('auth_token', token);
+      } else {
+        prefs.remove('auth_token');
+      }
+    } catch (_) {}
+    state = token;
+  }
+
+  bool _isTokenValid(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      final payloadStr = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
+      final exp = payload['exp'];
+      if (exp is int) {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        return exp > now;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final authTokenProvider = NotifierProvider<AuthTokenNotifier, String?>(AuthTokenNotifier.new);
 
 class AuthUserNotifier extends Notifier<Map<String, dynamic>?> {
   @override
-  Map<String, dynamic>? build() => null;
-  void setUser(Map<String, dynamic>? user) => state = user;
+  Map<String, dynamic>? build() {
+    try {
+      final prefs = ref.watch(sharedPreferencesProvider);
+      final storedUser = prefs.getString('auth_user');
+      if (storedUser != null && storedUser.isNotEmpty) {
+        return jsonDecode(storedUser) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void setUser(Map<String, dynamic>? user) {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (user != null) {
+        prefs.setString('auth_user', jsonEncode(user));
+      } else {
+        prefs.remove('auth_user');
+      }
+    } catch (_) {}
+    state = user;
+  }
 }
 
 final authUserProvider = NotifierProvider<AuthUserNotifier, Map<String, dynamic>?>(AuthUserNotifier.new);
@@ -39,6 +106,13 @@ final dioProvider = Provider<Dio>((ref) {
         options.headers['Authorization'] = 'Bearer $token';
       }
       handler.next(options);
+    },
+    onError: (DioException error, handler) {
+      if (error.response?.statusCode == 401) {
+        ref.read(authTokenProvider.notifier).setToken(null);
+        ref.read(authUserProvider.notifier).setUser(null);
+      }
+      handler.next(error);
     },
   ));
 

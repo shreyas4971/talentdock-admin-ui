@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'src/api_client.dart';
 import 'src/layout/admin_layout.dart';
 import 'src/screens/login_screen.dart';
@@ -10,8 +11,15 @@ import 'src/screens/positions/position_editor_screen.dart';
 import 'src/screens/candidate_list_screen.dart';
 import 'src/screens/candidate_details_screen.dart';
 
-void main() {
-  runApp(const ProviderScope(child: AdminApp()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  runApp(ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ],
+    child: const AdminApp(),
+  ));
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();

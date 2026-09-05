@@ -60,17 +60,51 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'HIRED':
+      case 'OFFER':
+        return Colors.green.shade50;
+      case 'INTERVIEW':
+        return Colors.purple.shade50;
+      case 'SHORTLISTED':
+      case 'REVIEWING':
+        return Colors.blue.shade50;
+      case 'REJECTED':
+        return Colors.red.shade50;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
+  Color _getStatusTextColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'HIRED':
+      case 'OFFER':
+        return Colors.green.shade800;
+      case 'INTERVIEW':
+        return Colors.purple.shade800;
+      case 'SHORTLISTED':
+      case 'REVIEWING':
+        return Colors.blue.shade800;
+      case 'REJECTED':
+        return Colors.red.shade800;
+      default:
+        return Colors.black87;
+    }
+  }
+
   Future<void> _updateStatus(String newStatus) async {
     setState(() => _isUpdatingStatus = true);
     try {
       final client = ref.read(adminApiClientProvider);
       await client.updateCandidateStatus(widget.id, newStatus);
+      await _loadCandidateDetails();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Candidate status updated to $newStatus')),
         );
       }
-      await _loadCandidateDetails();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,7 +117,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
   }
 
   void _showMoveStageDialog(String currentStatus) {
-    final stages = ['APPLIED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW', 'OFFER', 'HIRED'];
+    final stages = ['APPLIED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED'];
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -218,7 +252,14 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
           children: [
             IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
             const SizedBox(width: 16),
-            const Expanded(child: Text('Candidate Details', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+            const Text('Candidate Details', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 16),
+            Chip(
+              label: Text(currentStatus, style: TextStyle(color: _getStatusTextColor(currentStatus), fontWeight: FontWeight.bold, fontSize: 13)),
+              backgroundColor: _getStatusColor(currentStatus),
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             if (isDesktop) const Spacer(),
             if (isDesktop)
               ElevatedButton(
@@ -266,7 +307,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
                     flex: 2,
                     child: Column(
                       children: [
-                        _buildPersonalCard(candidate, position, application),
+                        _buildPersonalCard(candidate, position, application, currentStatus),
                         const SizedBox(height: 24),
                         _buildCareerCard(candidate),
                         const SizedBox(height: 24),
@@ -286,7 +327,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPersonalCard(candidate, position, application),
+                  _buildPersonalCard(candidate, position, application, currentStatus),
                   const SizedBox(height: 24),
                   _buildCareerCard(candidate),
                   const SizedBox(height: 24),
@@ -301,7 +342,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
     );
   }
 
-  Widget _buildPersonalCard(Map<String, dynamic> candidate, Map<String, dynamic> position, Map<String, dynamic> application) {
+  Widget _buildPersonalCard(Map<String, dynamic> candidate, Map<String, dynamic> position, Map<String, dynamic> application, String currentStatus) {
     final firstName = candidate['firstName']?.toString() ?? '';
     final lastName = candidate['lastName']?.toString() ?? '';
     final fullName = '$firstName $lastName'.trim();
@@ -338,7 +379,18 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(nameDisplay, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Flexible(child: Text(nameDisplay, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+                          const SizedBox(width: 12),
+                          Chip(
+                            label: Text(currentStatus, style: TextStyle(color: _getStatusTextColor(currentStatus), fontWeight: FontWeight.bold, fontSize: 12)),
+                            backgroundColor: _getStatusColor(currentStatus),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Text(posTitle, style: TextStyle(color: Colors.grey.shade700, fontSize: 16)),
                     ],

@@ -152,11 +152,9 @@ class _NavItem extends StatelessWidget {
     final isActive = route == '/' ? currentPath == '/' : currentPath.startsWith(route);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isActive ? Colors.blueAccent : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
+      child: Material(
+        color: isActive ? Colors.blueAccent : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
         child: ListTile(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           leading: Icon(icon, color: isActive ? Colors.white : Colors.black54),
