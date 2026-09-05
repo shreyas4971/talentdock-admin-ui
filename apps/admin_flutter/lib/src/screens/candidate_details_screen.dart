@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../api_client.dart';
+import '../utils/file_helper.dart';
 
 class CandidateDetailsScreen extends ConsumerStatefulWidget {
   final String id;
@@ -20,6 +21,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
   bool _isAddingNote = false;
   bool _isUpdatingStatus = false;
   bool _isDownloadingResume = false;
+  bool _isPreviewingResume = false;
 
   @override
   void initState() {
@@ -132,14 +134,32 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
     }
   }
 
-  Future<void> _handleResumeDownload() async {
+  Future<void> _handleResumePreview() async {
+    setState(() => _isPreviewingResume = true);
+    try {
+      final client = ref.read(adminApiClientProvider);
+      final bytes = await client.downloadResumeBytes(widget.id);
+      previewFileWeb(bytes, mimeType: 'application/pdf');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to preview resume: ${getFriendlyErrorMessage(e)}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPreviewingResume = false);
+    }
+  }
+
+  Future<void> _handleResumeDownload(String fileName) async {
     setState(() => _isDownloadingResume = true);
     try {
       final client = ref.read(adminApiClientProvider);
       final bytes = await client.downloadResumeBytes(widget.id);
+      downloadFileWeb(bytes, fileName, mimeType: 'application/pdf');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Resume downloaded successfully (${(bytes.lengthInBytes / 1024).toStringAsFixed(1)} KB)')),
+          SnackBar(content: Text('Resume download started for $fileName')),
         );
       }
     } catch (e) {
@@ -246,7 +266,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
                     flex: 2,
                     child: Column(
                       children: [
-                        _buildPersonalCard(candidate, position),
+                        _buildPersonalCard(candidate, position, application),
                         const SizedBox(height: 24),
                         _buildCareerCard(candidate),
                         const SizedBox(height: 24),
@@ -266,7 +286,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPersonalCard(candidate, position),
+                  _buildPersonalCard(candidate, position, application),
                   const SizedBox(height: 24),
                   _buildCareerCard(candidate),
                   const SizedBox(height: 24),
@@ -281,7 +301,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
     );
   }
 
-  Widget _buildPersonalCard(Map<String, dynamic> candidate, Map<String, dynamic> position) {
+  Widget _buildPersonalCard(Map<String, dynamic> candidate, Map<String, dynamic> position, Map<String, dynamic> application) {
     final firstName = candidate['firstName']?.toString() ?? '';
     final lastName = candidate['lastName']?.toString() ?? '';
     final fullName = '$firstName $lastName'.trim();
@@ -289,6 +309,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
     final initial = nameDisplay.isNotEmpty ? nameDisplay[0].toUpperCase() : 'C';
 
     final posTitle = position['title']?.toString() ?? candidate['position']?.toString() ?? 'Software Developer';
+    final refId = application['referenceId']?.toString() ?? candidate['referenceId']?.toString() ?? '-';
     final email = candidate['email']?.toString() ?? '-';
     final phone = candidate['phone']?.toString() ?? '-';
     final city = candidate['city']?.toString() ?? '';
@@ -330,15 +351,22 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
             const SizedBox(height: 24),
             Row(
               children: [
+                Expanded(child: _InfoItem(icon: Icons.confirmation_number_outlined, label: 'Application Reference ID', value: refId)),
                 Expanded(child: _InfoItem(icon: Icons.email, label: 'Email', value: email)),
-                Expanded(child: _InfoItem(icon: Icons.phone, label: 'Phone', value: phone)),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
+                Expanded(child: _InfoItem(icon: Icons.phone, label: 'Phone', value: phone)),
                 Expanded(child: _InfoItem(icon: Icons.location_on, label: 'Location', value: locationDisplay)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
                 Expanded(child: _InfoItem(icon: Icons.link, label: 'Portfolio', value: portfolio)),
+                const Expanded(child: SizedBox.shrink()),
               ],
             ),
           ],
@@ -410,9 +438,11 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
                     ),
                   ),
                   OutlinedButton.icon(
-                    icon: const Icon(Icons.visibility),
+                    icon: _isPreviewingResume
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.visibility),
                     label: const Text('Preview'),
-                    onPressed: _handleResumeDownload,
+                    onPressed: (_isPreviewingResume || _isDownloadingResume) ? null : () => _handleResumePreview(),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
@@ -420,7 +450,7 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.download),
                     label: const Text('Download'),
-                    onPressed: _isDownloadingResume ? null : _handleResumeDownload,
+                    onPressed: (_isPreviewingResume || _isDownloadingResume) ? null : () => _handleResumeDownload(fileName),
                   ),
                 ],
               ),

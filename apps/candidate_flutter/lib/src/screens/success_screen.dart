@@ -40,7 +40,7 @@ class SuccessScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
                       children: [
-                        _buildInfoRow('Application ID', refId ?? 'REC-MOCK-001'),
+                        _buildInfoRow('Application Reference ID', refId ?? 'REC-2026-000001'),
                         const Divider(height: 32),
                         _buildInfoRow('Registered Email', email ?? 'candidate@example.com'),
                       ],
