@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
-CORS_ORIGINS = "*"
+CORS_ORIGINS = "https://talentdock-candidate.pages.dev,https://talentdock-admin.pages.dev"
 
 [[d1_databases]]
 binding = "DB"

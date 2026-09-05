@@ -15,13 +15,18 @@ app.use('*', logger());
 
 // CORS Middleware (supports local Flutter web & production origins)
 app.use('*', async (c, next) => {
+  const allowedOrigins = (c.env.CORS_ORIGINS || '*').split(',').map((o) => o.trim());
   const corsMiddleware = cors({
     origin: (origin) => {
-      // Allow localhost on any port (Flutter web debug) and all production domains
-      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-        return origin || '*';
+      if (!origin) return '*';
+      // Allow localhost on any port (Flutter web debug)
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return origin;
       }
-      return origin;
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return origin;
+      }
+      return null;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'x-org-id'],
