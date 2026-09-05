@@ -79,6 +79,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   PlatformFile? _resumeFile;
   bool _declarationChecked = false;
   bool _isSubmitting = false;
+  bool _isCheckingDuplicate = false;
 
   void _submit() async {
     if (_resumeFile == null) {
@@ -161,27 +162,45 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   void _onStepContinue() async {
+    if (_isCheckingDuplicate || _isSubmitting) return;
+
     if (_currentStep == 0) {
       if (!_step1FormKey.currentState!.validate()) return;
       final email = _emailCtrl.text.trim();
       if (email.isNotEmpty) {
-        final client = ref.read(candidateApiClientProvider);
-        final isAlreadyApplied = await client.checkAlreadyApplied(
-          positionId: widget.positionId,
-          email: email,
-        );
-        if (isAlreadyApplied && mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Already Applied', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: const Text('You have already applied for this position.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
+        setState(() => _isCheckingDuplicate = true);
+        try {
+          final client = ref.read(candidateApiClientProvider);
+          final isAlreadyApplied = await client.checkAlreadyApplied(
+            positionId: widget.positionId,
+            email: email,
+          );
+          if (!mounted) return;
+          setState(() => _isCheckingDuplicate = false);
+
+          if (isAlreadyApplied) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Already Applied', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: const Text('You have already applied for this position.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          if (!mounted) return;
+          setState(() => _isCheckingDuplicate = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(getFriendlyErrorMessage(e)),
+              backgroundColor: Colors.redAccent,
             ),
           );
           return;
@@ -206,6 +225,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   void _onStepCancel() {
+    if (_isCheckingDuplicate || _isSubmitting) return;
     if (_currentStep > 0) {
       setState(() => _currentStep -= 1);
     } else {
@@ -263,8 +283,13 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                           currentStep: _currentStep,
                           onStepContinue: _onStepContinue,
                           onStepCancel: _onStepCancel,
-                          onStepTapped: (step) => setState(() => _currentStep = step),
+                          onStepTapped: (step) {
+                            if (step < _currentStep && !_isCheckingDuplicate && !_isSubmitting) {
+                              setState(() => _currentStep = step);
+                            }
+                          },
                           controlsBuilder: (context, details) {
+                            final isProcessing = _isCheckingDuplicate || _isSubmitting;
                             return Padding(
                               padding: const EdgeInsets.only(top: 32.0),
                               child: Row(
@@ -272,18 +297,31 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                                 children: [
                                   if (_currentStep > 0)
                                     TextButton(
-                                      onPressed: details.onStepCancel,
+                                      onPressed: isProcessing ? null : details.onStepCancel,
                                       child: const Text('Back'),
                                     ),
                                   const SizedBox(width: 16),
                                   ElevatedButton(
-                                    onPressed: details.onStepContinue,
+                                    onPressed: isProcessing ? null : details.onStepContinue,
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                                       backgroundColor: Colors.teal,
                                       foregroundColor: Colors.white,
                                     ),
-                                    child: Text(_currentStep == 3 ? 'Submit Application' : 'Continue'),
+                                    child: _isCheckingDuplicate
+                                      ? const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text('Checking...'),
+                                          ],
+                                        )
+                                      : Text(_currentStep == 3 ? 'Submit Application' : 'Continue'),
                                   ),
                                 ],
                               ),

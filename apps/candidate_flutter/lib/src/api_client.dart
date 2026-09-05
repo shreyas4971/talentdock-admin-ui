@@ -78,9 +78,7 @@ class CandidateApiClient {
       if (e.response?.statusCode == 409) {
         return true;
       }
-      return false;
-    } catch (_) {
-      return false;
+      rethrow;
     }
   }
 
