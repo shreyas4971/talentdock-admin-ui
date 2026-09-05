@@ -171,7 +171,13 @@ applicationsRoute.post('/', async (c) => {
     }).run();
 
     // 3. Upload Resume to R2 & persist metadata in D1
-    const resumeStorageKey = R2StorageService.buildResumeKey(positionId, candidateId, originalFileName);
+    const cleanFirstName = (firstName || '').trim();
+    const cleanLastName = (lastName || '').trim();
+    const formattedResumeName = cleanLastName
+      ? `${cleanFirstName} ${cleanLastName}_Resume.pdf`
+      : `${cleanFirstName}_Resume.pdf`;
+
+    const resumeStorageKey = R2StorageService.buildResumeKey(positionId, candidateId, formattedResumeName);
 
     if (c.env.RESUMES_BUCKET) {
       await R2StorageService.upload(c.env.RESUMES_BUCKET, resumeStorageKey, resumeBuffer, {
@@ -179,7 +185,7 @@ applicationsRoute.post('/', async (c) => {
         customMetadata: {
           applicationId,
           candidateId,
-          originalName: originalFileName,
+          originalName: formattedResumeName,
         },
       });
     }
@@ -189,7 +195,7 @@ applicationsRoute.post('/', async (c) => {
       applicationId,
       candidateId,
       documentType: 'RESUME',
-      fileName: originalFileName,
+      fileName: formattedResumeName,
       mimeType: 'application/pdf',
       fileSize: resumeBuffer.byteLength,
       storageKey: resumeStorageKey,

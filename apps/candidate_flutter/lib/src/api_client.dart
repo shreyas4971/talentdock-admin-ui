@@ -114,12 +114,18 @@ class CandidateApiClient {
       if (additionalInfo != null && additionalInfo.trim().isNotEmpty) MapEntry('additionalInfo', additionalInfo.trim()),
     ]);
 
+    final cleanFirst = firstName.trim();
+    final cleanLast = lastName.trim();
+    final formattedResumeName = cleanLast.isNotEmpty
+        ? '$cleanFirst ${cleanLast}_Resume.pdf'
+        : '${cleanFirst}_Resume.pdf';
+
     // Resume file attachment
     formData.files.add(MapEntry(
       'resume',
       MultipartFile.fromBytes(
         resumeFile.bytes!,
-        filename: resumeFile.name,
+        filename: formattedResumeName,
       ),
     ));
 
