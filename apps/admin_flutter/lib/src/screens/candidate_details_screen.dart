@@ -30,6 +30,14 @@ class _CandidateDetailsScreenState extends ConsumerState<CandidateDetailsScreen>
   }
 
   @override
+  void didUpdateWidget(covariant CandidateDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id) {
+      _loadCandidateDetails();
+    }
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     super.dispose();

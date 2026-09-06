@@ -40,6 +40,14 @@ class _PositionEditorScreenState extends ConsumerState<PositionEditorScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant PositionEditorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id && widget.id != null) {
+      _loadExistingPosition();
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _deptController.dispose();

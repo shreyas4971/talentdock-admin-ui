@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../api_client.dart';
+import '../widgets/global_search_dialog.dart';
 
 class AdminLayout extends ConsumerWidget {
   final Widget child;
@@ -40,12 +41,13 @@ class AdminLayout extends ConsumerWidget {
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Search dialog opened')));
-          }),
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications opened')));
-          }),
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search (Candidates, Positions)',
+            onPressed: () {
+              GlobalSearchDialog.show(context);
+            },
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: PopupMenuButton<String>(
@@ -58,7 +60,7 @@ class AdminLayout extends ConsumerWidget {
                   ref.read(authUserProvider.notifier).setUser(null);
                   context.go('/login');
                 } else if (value == 'settings') {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings opened')));
+                  context.go('/settings');
                 }
               },
               itemBuilder: (context) => [

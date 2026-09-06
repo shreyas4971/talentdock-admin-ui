@@ -7,6 +7,7 @@ import authRoute from './routes/auth';
 import positionsRoute from './routes/positions';
 import applicationsRoute from './routes/applications';
 import candidatesRoute from './routes/candidates';
+import searchRoute from './routes/search';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -71,6 +72,7 @@ v1.route('/auth', authRoute);
 v1.route('/positions', positionsRoute);
 v1.route('/applications', applicationsRoute);
 v1.route('/candidates', candidatesRoute);
+v1.route('/search', searchRoute);
 
 app.route('/api/v1', v1);
 

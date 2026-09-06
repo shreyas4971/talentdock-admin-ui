@@ -331,6 +331,85 @@ class AdminApiClient {
     }
     throw Exception('Failed to download resume from storage');
   }
+
+  /// Global Search
+  Future<Map<String, dynamic>> search(String query) async {
+    if (isMockMode) {
+      final q = query.toLowerCase();
+      final matchedCands = mockCandidates.where((c) {
+        final name = (c['name'] ?? '').toString().toLowerCase();
+        final email = (c['email'] ?? '').toString().toLowerCase();
+        final phone = (c['phone'] ?? '').toString().toLowerCase();
+        final ref = (c['referenceId'] ?? '').toString().toLowerCase();
+        return name.contains(q) || email.contains(q) || phone.contains(q) || ref.contains(q);
+      }).map((c) => {
+        'id': c['id'],
+        'candidateId': c['id'],
+        'name': c['name'],
+        'positionTitle': c['position'],
+        'referenceId': c['referenceId'] ?? 'REC-2026-000001',
+        'status': c['status'],
+      }).toList();
+
+      final matchedPos = mockPositions.where((p) {
+        final title = (p['title'] ?? '').toString().toLowerCase();
+        final dept = (p['department'] ?? '').toString().toLowerCase();
+        return title.contains(q) || dept.contains(q);
+      }).map((p) => {
+        'id': p['id'],
+        'title': p['title'],
+        'department': p['department'],
+        'location': p['location'],
+        'status': p['status'],
+      }).toList();
+
+      return {
+        'candidates': matchedCands,
+        'positions': matchedPos,
+      };
+    }
+
+    final response = await _dio.get('/search', queryParameters: {'q': query});
+    if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
+      return Map<String, dynamic>.from(response.data['data'] ?? {});
+    }
+    throw Exception(response.data?['message'] ?? 'Search failed');
+  }
+
+  /// Get Current Authenticated User Profile
+  Future<Map<String, dynamic>> getMe() async {
+    if (isMockMode) {
+      return {
+        'id': 'usr-admin-default',
+        'email': 'admin@talentdock.local',
+        'name': 'TalentDock Admin',
+        'role': 'ADMIN',
+      };
+    }
+    final response = await _dio.get('/auth/me');
+    if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
+      return Map<String, dynamic>.from(response.data['data']);
+    }
+    throw Exception(response.data?['message'] ?? 'Failed to load user profile');
+  }
+
+  /// Change Password
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (isMockMode) return;
+    final response = await _dio.post('/auth/change-password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+      'confirmPassword': confirmPassword,
+    });
+    if (response.statusCode == 200 && response.data != null && response.data['success'] == true) {
+      return;
+    }
+    throw Exception(response.data?['message'] ?? 'Failed to change password');
+  }
 }
 
 String getFriendlyErrorMessage(dynamic e) {

@@ -10,6 +10,7 @@ import 'src/screens/positions/position_list_screen.dart';
 import 'src/screens/positions/position_editor_screen.dart';
 import 'src/screens/candidate_list_screen.dart';
 import 'src/screens/candidate_details_screen.dart';
+import 'src/screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => CandidateDetailsScreen(id: state.pathParameters['id']!),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
